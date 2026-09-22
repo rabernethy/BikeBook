@@ -878,6 +878,7 @@ async function viewSettings(){
   const [cs,os,as,invs]=await Promise.all([dbAll("customers"),dbAll("orders"),dbAll("assets"),dbAll("invoices")]);
   const b=await getBuilder();
   const theme=localStorage.getItem("bb-theme")||"auto";
+  const ps=await persistStatus();
   show(`
     <h1>Settings</h1><p class="sub">Backups, appearance, and sample data.</p>
     <div class="cols">
@@ -892,6 +893,15 @@ async function viewSettings(){
             <label class="btn" style="cursor:pointer">⬆ Import backup<input type="file" hidden accept="application/json" onchange="importData(this)"></label>
           </div>
           <p class="hint" style="margin-bottom:0">Currently storing: ${cs.length} customers · ${os.length} builds · ${invs.length} invoices · ${as.length} files.</p>
+        </div></div>
+        <div class="card"><div class="hd">Storage durability</div><div class="bd">
+          ${!ps.supported
+            ? `<p class="muted" style="margin-top:0">This browser manages storage on its own. Keep regular Export backups.</p>`
+            : ps.persisted
+              ? `<p style="margin-top:0;color:var(--good);font-weight:750">✓ Permanent — this browser won't auto-clear your data to free up space.</p>`
+              : `<p class="muted" style="margin-top:0">Tell the browser to keep your data and never clear it automatically to reclaim space.</p><div class="actions"><button class="btn pri" onclick="requestPersist()">🔒 Make storage permanent</button></div>`}
+          ${ps.quota?`<p class="hint">Using ${fmtBytes(ps.usage)} of ~${fmtBytes(ps.quota)} available on this device.</p>`:""}
+          <p class="hint" style="margin-bottom:0">This only stops <i>automatic</i> clearing. Uninstalling the app, “Clear site data”, or a device reset still erase it — so keep an Export backup as your real safety net.</p>
         </div></div>
         <div class="card"><div class="hd">Sample data</div><div class="bd">
           <p class="muted" style="margin-top:0">Load a few example customers and builds to see how it works. Safe to clear afterward.</p>
@@ -909,6 +919,10 @@ async function viewSettings(){
 }
 function setTheme(t){localStorage.setItem("bb-theme",t);applyTheme();}
 function applyTheme(){const t=localStorage.getItem("bb-theme")||"auto";if(t==="auto")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",t);}
+async function persistStatus(){const s={supported:!!(navigator.storage&&navigator.storage.persist),persisted:false,usage:0,quota:0};try{if(navigator.storage){if(navigator.storage.persisted)s.persisted=await navigator.storage.persisted();if(navigator.storage.estimate){const e=await navigator.storage.estimate();s.usage=e.usage||0;s.quota=e.quota||0;}}}catch(_){}return s;}
+async function ensurePersistence(){try{if(navigator.storage&&navigator.storage.persist){const has=navigator.storage.persisted?await navigator.storage.persisted():false;if(!has)await navigator.storage.persist();}}catch(_){}}
+async function requestPersist(){let ok=false;try{if(navigator.storage&&navigator.storage.persist)ok=await navigator.storage.persist();}catch(_){}toast(ok?"Storage is now permanent on this device.":"Browser didn't grant it yet — it usually does once you add the app to your home screen. Keep a backup meanwhile.");router();}
+function fmtBytes(n){n=Number(n)||0;if(n<1024)return n+" B";const u=["KB","MB","GB","TB"];let i=-1;do{n/=1024;i++;}while(n>=1024&&i<u.length-1);return (n<10?n.toFixed(1):Math.round(n))+" "+u[i];}
 
 async function exportData(){
   const [customers,orders,assets,invoices,settings]=await Promise.all([dbAll("customers"),dbAll("orders"),dbAll("assets"),dbAll("invoices"),dbAll("settings")]);
@@ -1407,6 +1421,7 @@ window.addEventListener("hashchange",router);
   }
   try{ await migrateStages(); }catch(_){}
   try{ renderShopInfo(await getBuilder()); }catch(_){}
+  try{ ensurePersistence(); }catch(_){}
   if(!location.hash)location.hash="#/";
   router();
 })();
