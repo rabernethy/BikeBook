@@ -396,6 +396,8 @@ async function viewDashboard(){
   const active=orders.filter(o=>!DONE_STAGES.includes(o.stage));
   const pipeline=active.reduce((s,o)=>s+bomTotal(o),0);
   const collected=invoices.reduce((s,i)=>s+invPaid(i),0);
+  const paidInvs=invoices.filter(i=>i.status==="Paid").sort((a,b)=>(b.issueDate||b.createdAt||"").localeCompare(a.issueDate||a.createdAt||""));
+  const earned=paidInvs.reduce((s,i)=>s+invTotal(i),0);
   const outstanding=invoices.filter(i=>i.status!=="Paid").reduce((s,i)=>s+Math.max(0,invBalance(i)),0);
   const overdue=active.filter(o=>{const d=daysUntil(o.promisedDate);return d!=null&&d<0;}).sort((a,b)=>(a.promisedDate||"").localeCompare(b.promisedDate||""));
   const avgVal=active.length?Math.round(pipeline/active.length):0;
@@ -416,6 +418,7 @@ async function viewDashboard(){
     pipeline:card("Pipeline value by stage",byStageValue.length?hbars(byStageValue,money):noData),
     avg:card("Active build values",buildVals.length?`<p class="muted" style="margin:0 0 12px">Average ${money(avgVal)} across ${active.length} active build${active.length===1?"":"s"}.</p>`+hbars(buildVals,money):noData),
     collected:card("Revenue collected · last 6 months",collected?svgBars(rev,money):noData),
+    earned:card("Paid invoices · money earned",paidInvs.length?`<p class="muted" style="margin:0 0 12px">${money(earned)} earned across ${paidInvs.length} paid invoice${paidInvs.length===1?"":"s"}.</p><table><thead><tr><th>#</th><th>Customer</th><th>Issued</th><th style="text-align:right">Total</th></tr></thead><tbody>${paidInvs.map(i=>`<tr onclick="go('#/invoices/${i.id}')"><td><b>${esc(i.number||"—")}</b></td><td class="muted">${esc(cmap[i.customerId]?.name||"—")}</td><td class="muted">${fdate(i.issueDate)}</td><td style="text-align:right;font-weight:700">${money(invTotal(i))}</td></tr>`).join("")}</tbody></table>`:'<div class="muted">No paid invoices yet.</div>'),
     outstanding:card("Unpaid invoices",unpaid.length?`<table><thead><tr><th>#</th><th>Customer</th><th style="text-align:right">Balance</th></tr></thead><tbody>${unpaid.map(i=>`<tr onclick="go('#/invoices/${i.id}')"><td><b>${esc(i.number||"—")}</b></td><td class="muted">${esc(cmap[i.customerId]?.name||"—")}</td><td style="text-align:right;font-weight:700">${money(invBalance(i))}</td></tr>`).join("")}</tbody></table>`:'<div class="muted">Nothing outstanding.</div>'),
     overdue:card("Overdue builds",overdue.length?`<table><thead><tr><th>Build</th><th>Customer</th><th>Promised</th></tr></thead><tbody>${overdue.map(o=>{const d=daysUntil(o.promisedDate);return `<tr onclick="go('#/orders/${o.id}')"><td><b>${esc(o.title||"Untitled")}</b></td><td class="muted">${esc(cmap[o.customerId]?.name||"—")}</td><td style="color:var(--bad);font-weight:700">${fdate(o.promisedDate)} (${Math.abs(d)}d late)</td></tr>`;}).join("")}</tbody></table>`:'<div class="muted">Nothing overdue.</div>')
   };
@@ -429,6 +432,7 @@ async function viewDashboard(){
       ${tile("pipeline","Pipeline value",money(pipeline))}
       ${tile("avg","Avg build value",money(avgVal))}
       ${tile("collected","Collected",money(collected))}
+      ${tile("earned","Earned",money(earned))}
       ${tile("outstanding","Outstanding",money(outstanding))}
       ${tile("overdue","Overdue",overdue.length,overdue.length?"color:var(--bad)":"")}
     </div>
