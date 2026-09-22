@@ -267,7 +267,7 @@ const GEO_FIELDS = [
 ];
 
 /* ---------- tiny IndexedDB layer ---------- */
-const DB_NAME="buildbook", DB_VER=2;
+const DB_NAME="buildbook", DB_VER=3;
 let _db=null;
 function openDB(){
   return new Promise((res,rej)=>{
@@ -285,6 +285,7 @@ function openDB(){
         s.createIndex("customerId","customerId",{unique:false});
       }
       if(!db.objectStoreNames.contains("settings")) db.createObjectStore("settings",{keyPath:"id"});
+      if(!db.objectStoreNames.contains("backups")) db.createObjectStore("backups",{keyPath:"id"});
     };
     r.onsuccess=e=>{_db=e.target.result;_db.onversionchange=()=>{try{_db.close();}catch(_){}};res(_db)};
     r.onerror=e=>rej(e.target.error);
@@ -879,6 +880,7 @@ async function viewSettings(){
   const b=await getBuilder();
   const theme=localStorage.getItem("bb-theme")||"auto";
   const ps=await persistStatus();
+  const backups=await listBackups();
   show(`
     <h1>Settings</h1><p class="sub">Backups, appearance, and sample data.</p>
     <div class="cols">
@@ -893,6 +895,16 @@ async function viewSettings(){
             <label class="btn" style="cursor:pointer">⬆ Import backup<input type="file" hidden accept="application/json" onchange="importData(this)"></label>
           </div>
           <p class="hint" style="margin-bottom:0">Currently storing: ${cs.length} customers · ${os.length} builds · ${invs.length} invoices · ${as.length} files.</p>
+        </div></div>
+        <div class="card"><div class="hd">Automatic backups</div><div class="bd">
+          <p class="muted" style="margin-top:0">Snapshots saved automatically to this device so you can roll back. The last ${AUTO_KEEP} auto snapshots are kept — <b>download</b> one for an off-device copy.</p>
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div class="field" style="max-width:180px;margin:0"><label>Frequency</label><select onchange="setBackupInterval(this.value)">
+              ${[["daily","Daily"],["weekly","Weekly"],["off","Off"]].map(([v,l])=>`<option value="${v}" ${backupInterval()===v?"selected":""}>${l}</option>`).join("")}
+            </select></div>
+            <button class="btn" onclick="backupNow()">＋ Back up now</button>
+          </div>
+          ${backups.length?`<table style="margin-top:12px"><thead><tr><th>When</th><th>Contents</th><th>Size</th><th></th></tr></thead><tbody>${backups.map(bk=>`<tr><td><b>${fdateTime(bk.createdAt)}</b> <span class="muted" style="font-size:11px">${bk.kind}</span></td><td class="muted">${bk.counts.customers}c · ${bk.counts.builds}b · ${bk.counts.invoices}i · ${bk.counts.files}f</td><td class="muted">${fmtBytes(bk.size)}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" onclick="restoreBackup('${bk.id}')">Restore</button> <button class="btn sm" onclick="downloadBackup('${bk.id}')" title="Download">⬇</button> <button class="btn sm danger" onclick="deleteBackup('${bk.id}')" title="Delete">✕</button></td></tr>`).join("")}</tbody></table>`:'<p class="hint" style="margin-bottom:0">No snapshots yet — one is created automatically as you use the app, or tap “Back up now”.</p>'}
         </div></div>
         <div class="card"><div class="hd">Storage durability</div><div class="bd">
           ${!ps.supported
@@ -923,29 +935,80 @@ async function persistStatus(){const s={supported:!!(navigator.storage&&navigato
 async function ensurePersistence(){try{if(navigator.storage&&navigator.storage.persist){const has=navigator.storage.persisted?await navigator.storage.persisted():false;if(!has)await navigator.storage.persist();}}catch(_){}}
 async function requestPersist(){let ok=false;try{if(navigator.storage&&navigator.storage.persist)ok=await navigator.storage.persist();}catch(_){}toast(ok?"Storage is now permanent on this device.":"Browser didn't grant it yet — it usually does once you add the app to your home screen. Keep a backup meanwhile.");router();}
 function fmtBytes(n){n=Number(n)||0;if(n<1024)return n+" B";const u=["KB","MB","GB","TB"];let i=-1;do{n/=1024;i++;}while(n>=1024&&i<u.length-1);return (n<10?n.toFixed(1):Math.round(n))+" "+u[i];}
+function fdateTime(iso){try{return new Date(iso).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});}catch(_){return String(iso||"");}}
 
-async function exportData(){
+async function buildDump(){
   const [customers,orders,assets,invoices,settings]=await Promise.all([dbAll("customers"),dbAll("orders"),dbAll("assets"),dbAll("invoices"),dbAll("settings")]);
   const encAssets=[];
   for(const a of assets){const b64=await blobToB64(a.blob);encAssets.push({...a,blob:null,b64,mime:a.type});}
-  const dump={_app:"buildbook",_v:2,exportedAt:now(),customers,orders,invoices,settings,assets:encAssets};
+  return {_app:"buildbook",_v:2,exportedAt:now(),customers,orders,invoices,settings,assets:encAssets};
+}
+function dumpSlug(dump){const bp=(dump.settings||[]).find(s=>s.id==="builder")||{};return ((bp.shopName||bp.builderName||"shop").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""))||"shop";}
+async function exportData(){
+  const dump=await buildDump();
   const blob=new Blob([JSON.stringify(dump)],{type:"application/json"});
-  const bp=settings.find(s=>s.id==="builder")||{};
-  const slug=((bp.shopName||bp.builderName||"shop").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""))||"shop";
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=slug+"-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=dumpSlug(dump)+"-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();
   toast("Backup downloaded");
 }
-async function importData(input){
-  const file=input.files[0];if(!file)return;
-  if(!confirm("Importing will REPLACE all current data with the backup. Continue?"))return;
-  const text=await file.text();const dump=JSON.parse(text);
-  if(dump._app!=="buildbook")return alert("This isn't a valid backup file.");
+
+/* ---------- Automatic local backups (rotating snapshots in this device's storage) ---------- */
+const AUTO_KEEP=5;
+function backupInterval(){return localStorage.getItem("bb-autobackup")||"daily";}
+function setBackupInterval(v){localStorage.setItem("bb-autobackup",v);toast(v==="off"?"Auto-backup turned off":"Auto-backup: "+v);router();}
+async function makeBackup(kind){
+  const dump=await buildDump();
+  const blob=new Blob([JSON.stringify(dump)],{type:"application/json"});
+  const rec={id:"bk-"+Date.now()+"-"+Math.floor(Math.random()*1e4),createdAt:now(),kind:kind||"manual",
+    counts:{customers:(dump.customers||[]).length,builds:(dump.orders||[]).length,invoices:(dump.invoices||[]).length,files:(dump.assets||[]).length},
+    size:blob.size,blob};
+  await dbPut("backups",rec);
+  if(rec.kind==="auto")await pruneAuto();
+  return rec;
+}
+async function pruneAuto(){
+  const autos=(await dbAll("backups")).filter(b=>b.kind==="auto").sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  for(const b of autos.slice(AUTO_KEEP))await dbDel("backups",b.id);
+}
+async function listBackups(){return (await dbAll("backups")).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));}
+async function autoBackupIfDue(){
+  try{
+    const iv=backupInterval();if(iv==="off")return;
+    const hasData=(await dbAll("customers")).length+(await dbAll("orders")).length+(await dbAll("invoices")).length>0;
+    if(!hasData)return;
+    const autos=(await dbAll("backups")).filter(b=>b.kind==="auto").sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+    const ms=iv==="weekly"?7*864e5:864e5, last=autos[0];
+    if(!last||(Date.now()-new Date(last.createdAt).getTime())>=ms)await makeBackup("auto");
+  }catch(_){}
+}
+async function backupNow(){try{const r=await makeBackup("manual");toast("Backup saved to this device ("+fmtBytes(r.size)+")");}catch(e){toast("Backup failed");}router();}
+async function restoreBackup(id){
+  const rec=await dbGet("backups",id);if(!rec||!rec.blob)return;
+  if(!confirm("Restore the snapshot from "+fdateTime(rec.createdAt)+"?\n\nThis REPLACES all current data with that snapshot. Your other saved snapshots are kept."))return;
+  const dump=JSON.parse(await rec.blob.text());
+  await applyDump(dump);
+  renderShopInfo(await getBuilder());
+  toast("Restored");go("#/");
+}
+async function downloadBackup(id){
+  const rec=await dbGet("backups",id);if(!rec||!rec.blob)return;
+  const a=document.createElement("a");a.href=URL.createObjectURL(rec.blob);a.download="bikebook-backup-"+String(rec.createdAt).slice(0,19).replace(/[:T]/g,"-")+".json";a.click();
+  toast("Backup downloaded");
+}
+async function deleteBackup(id){if(!confirm("Delete this snapshot?"))return;await dbDel("backups",id);toast("Deleted");router();}
+async function applyDump(dump){
   for(const s of ["customers","orders","assets","invoices","settings"]){const store=tx(s,"readwrite");await pr(store.clear());}
   for(const c of dump.customers||[])await dbPut("customers",c);
   for(const o of dump.orders||[])await dbPut("orders",o);
   for(const iv of dump.invoices||[])await dbPut("invoices",iv);
   for(const st of dump.settings||[])await dbPut("settings",st);
   for(const a of dump.assets||[]){const blob=a.b64?b64ToBlob(a.b64,a.mime):null;await dbPut("assets",{id:a.id,orderId:a.orderId,kind:a.kind,name:a.name,type:a.mime||a.type,createdAt:a.createdAt,blob});}
+}
+async function importData(input){
+  const file=input.files[0];if(!file)return;
+  if(!confirm("Importing will REPLACE all current data with the backup. Continue?"))return;
+  const text=await file.text();const dump=JSON.parse(text);
+  if(dump._app!=="buildbook")return alert("This isn't a valid backup file.");
+  await applyDump(dump);
   renderShopInfo(await getBuilder());
   toast("Backup imported");go("#/");
 }
@@ -1422,6 +1485,7 @@ window.addEventListener("hashchange",router);
   try{ await migrateStages(); }catch(_){}
   try{ renderShopInfo(await getBuilder()); }catch(_){}
   try{ ensurePersistence(); }catch(_){}
+  try{ autoBackupIfDue(); }catch(_){}
   if(!location.hash)location.hash="#/";
   router();
 })();
