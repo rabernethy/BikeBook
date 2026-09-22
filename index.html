@@ -1,0 +1,1399 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Custom Bike Shop</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --panel-2:#f0f2f5; --ink:#1b2430; --ink-2:#5b6675;
+    --line:#e2e6ec; --accent:#e8590c; --accent-ink:#ffffff; --good:#1a7f4b; --warn:#b7791f;
+    --bad:#c0392b; --chip:#eef1f5; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+    --radius:12px;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1319; --panel:#161b23; --panel-2:#1c222c; --ink:#e6eaf0; --ink-2:#9aa6b6;
+    --line:#28303b; --accent:#f97316; --accent-ink:#1b1206; --good:#3fbf7f; --warn:#e0a83e;
+    --bad:#f06b5c; --chip:#222a35; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f1319; --panel:#161b23; --panel-2:#1c222c; --ink:#e6eaf0; --ink-2:#9aa6b6;
+      --line:#28303b; --accent:#f97316; --accent-ink:#1b1206; --good:#3fbf7f; --warn:#e0a83e;
+      --bad:#f06b5c; --chip:#222a35; --shadow:0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:14.5px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .app{display:flex;min-height:100vh}
+  /* Sidebar */
+  .side{width:230px;flex:0 0 230px;background:var(--panel);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:16px 12px;gap:4px}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 14px;font-weight:800;font-size:17px;letter-spacing:.2px}
+  .brand .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:15px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;color:var(--ink-2);font-weight:600}
+  .nav a .ic{width:18px;text-align:center;opacity:.9}
+  .nav a:hover{background:var(--panel-2);color:var(--ink)}
+  .nav a.active{background:var(--accent);color:var(--accent-ink)}
+  .side .spacer{flex:1}
+  .side .foot{font-size:12px;color:var(--ink-2);padding:8px}
+  /* Main */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{display:none}
+  .content{padding:26px 30px;max-width:1180px;width:100%;margin:0 auto}
+  h1{font-size:23px;margin:0 0 3px}
+  h2{font-size:16px;margin:26px 0 12px;letter-spacing:.2px}
+  .sub{color:var(--ink-2);margin:0 0 20px}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .between{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  /* Cards + stat tiles */
+  .grid{display:grid;gap:14px}
+  .stats{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow)}
+  .tile .k{font-size:12.5px;color:var(--ink-2);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .tile .v{font-size:26px;font-weight:800;margin-top:6px}
+  .tile .v small{font-size:13px;font-weight:600;color:var(--ink-2)}
+  .tile.click{cursor:pointer;transition:border-color .12s,box-shadow .12s}
+  .tile.click:hover{border-color:var(--accent)}
+  .tile.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .tile .car{float:right;opacity:.4;font-weight:400}
+  .tile.active .car{opacity:.9;transform:rotate(180deg);display:inline-block}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card .hd{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .card .bd{padding:16px}
+  .card .bd.tight{padding:0}
+  /* Buttons */
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-weight:650;cursor:pointer;font-size:14px}
+  .btn:hover{background:var(--panel-2)}
+  .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn.pri:hover{filter:brightness(.96)}
+  .btn.sm{padding:5px 9px;font-size:13px;border-radius:8px}
+  .btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+  .btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+  .btn.ghost:hover{background:var(--panel-2);color:var(--ink)}
+  /* Tables */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-2);font-weight:700}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--panel-2)}
+  tbody tr:last-child td{border-bottom:none}
+  .muted{color:var(--ink-2)}
+  .empty{padding:40px;text-align:center;color:var(--ink-2)}
+  /* Chips */
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:var(--chip);font-size:12.5px;font-weight:650;color:var(--ink-2)}
+  .chip.stage{color:var(--ink)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  .chip.good{color:var(--good)} .chip.good .dot{background:var(--good)}
+  .chip.warn{color:var(--warn)} .chip.warn .dot{background:var(--warn)}
+  .chip.bad{color:var(--bad)} .chip.bad .dot{background:var(--bad)}
+  /* Forms */
+  .form{display:grid;gap:15px}
+  .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field.wide{grid-column:1/-1}
+  label{font-weight:650;font-size:13px;color:var(--ink-2)}
+  input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 11px;width:100%}
+  input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);border-color:var(--accent)}
+  textarea{resize:vertical;min-height:70px}
+  .hint{font-size:12px;color:var(--ink-2)}
+  fieldset{border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:0}
+  legend{font-weight:750;padding:0 8px;color:var(--ink)}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+  /* Kanban */
+  .board{display:flex;gap:14px;overflow-x:auto;padding-bottom:14px}
+  .lane{flex:0 0 250px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;max-height:72vh}
+  .lane .lh{padding:11px 13px;font-weight:750;font-size:13px;display:flex;justify-content:space-between;border-bottom:1px solid var(--line)}
+  .lane .lb{padding:10px;display:flex;flex-direction:column;gap:9px;overflow-y:auto}
+  .oc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 12px;box-shadow:var(--shadow);cursor:pointer}
+  .oc:hover{border-color:var(--accent)}
+  .oc .t{font-weight:700}
+  .oc .m{font-size:12.5px;color:var(--ink-2);margin-top:3px}
+  .oc .blk{margin-top:7px;font-size:12px;color:var(--warn);display:flex;gap:5px;align-items:center}
+  /* Detail layout */
+  .cols{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:8px 14px;font-size:14px}
+  .kv dt{color:var(--ink-2);font-weight:600}
+  .kv dd{margin:0}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+  .gallery figure{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel-2)}
+  .gallery img{width:100%;height:100px;object-fit:cover;display:block}
+  .gallery figcaption{font-size:11px;padding:5px 7px;color:var(--ink-2);display:flex;justify-content:space-between;gap:4px;align-items:center}
+  .filechip{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);margin-bottom:8px}
+  .timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+  .timeline li{display:flex;gap:11px}
+  .timeline .tdot{width:9px;height:9px;border-radius:50%;background:var(--accent);margin-top:6px;flex:0 0 auto}
+  .timeline .tx{flex:1}
+  .timeline .tt{font-size:12px;color:var(--ink-2)}
+  .checkitem{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .checkitem input{width:auto}
+  .checkitem.done label{text-decoration:line-through;color:var(--ink-2)}
+  .backlink{display:inline-flex;gap:6px;align-items:center;color:var(--ink-2);font-weight:600;margin-bottom:14px}
+  .backlink:hover{color:var(--ink)}
+  .pillbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+  .rowline{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .rowline input,.rowline select{flex:1}
+  .note{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:9px}
+  .note .nt{font-size:12px;color:var(--ink-2);margin-bottom:3px}
+  .shopinfo{padding:0 8px 12px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+  .shopinfo .shopname{font-weight:750;font-size:13.5px;line-height:1.3}
+  .shopinfo .shopsub{font-size:12px;color:var(--ink-2)}
+  .shopinfo a.shopsub:hover{text-decoration:underline}
+  .invoice{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:34px;max-width:840px;box-shadow:var(--shadow)}
+  .invoice .ihead{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:26px}
+  .invoice .ititle{font-size:25px;font-weight:800;margin:6px 0 2px;letter-spacing:.5px}
+  .invoice .parties{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+  .invoice .party .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-2);font-weight:700;margin-bottom:5px}
+  .itotals{margin-left:auto;width:290px;max-width:100%;margin-top:10px}
+  .itotals .r{display:flex;justify-content:space-between;padding:6px 0}
+  .itotals .r.grand{border-top:2px solid var(--line);margin-top:4px;padding-top:11px;font-weight:800;font-size:17px}
+  .itotals .r.due{border-top:1px solid var(--line);margin-top:4px;padding-top:11px;color:var(--accent);font-size:16px}
+  .logo{max-height:70px;max-width:220px;object-fit:contain;display:block;margin-bottom:8px}
+  .statusdoc{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:34px;max-width:820px;box-shadow:var(--shadow)}
+  .sd-head{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:18px}
+  .sd-shop{font-weight:800;font-size:18px}
+  .sd-title{font-size:22px;font-weight:800;letter-spacing:.5px}
+  .sd-meta{text-align:right}
+  .sd-for{color:var(--ink-2);margin-bottom:6px}
+  .sd-spec{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 22px}
+  .sd-progress{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:22px}
+  .sd-current{font-size:16px;margin-bottom:10px}
+  .sd-bar{height:12px;border-radius:999px;background:var(--line);overflow:hidden}
+  .sd-fill{height:100%;background:var(--accent);border-radius:999px}
+  .sd-msg{margin-top:12px}
+  .sd-eta{margin-top:8px;color:var(--ink-2)}
+  .sd-stages{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+  .sd-stages li{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:9px;font-size:13.5px;color:var(--ink-2)}
+  .sd-stages li .mk{width:20px;height:20px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;font-size:11px;border:2px solid var(--line)}
+  .sd-stages li.done{color:var(--ink)}
+  .sd-stages li.done .mk{background:var(--good);border-color:var(--good);color:#fff}
+  .sd-stages li.cur{background:color-mix(in srgb,var(--accent) 12%,transparent);font-weight:750;color:var(--ink)}
+  .sd-stages li.cur .mk{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .sd-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:22px 0 0}
+  .sd-photos img{width:100%;height:130px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+  .sd-foot{border-top:1px solid var(--line);padding-top:14px;margin-top:22px;color:var(--ink-2);font-size:13px}
+  .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin:16px 0}
+  .hbars{display:flex;flex-direction:column;gap:8px}
+  .hbar{display:grid;grid-template-columns:130px 1fr auto;align-items:center;gap:10px;font-size:13px}
+  .hbar-l{color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hbar-track{background:var(--panel-2);border-radius:999px;height:12px;overflow:hidden}
+  .hbar-fill{height:100%;background:var(--accent);border-radius:999px}
+  .hbar-v{text-align:right;font-weight:700;min-width:34px;white-space:nowrap}
+  .donut-wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .donut-legend{display:flex;flex-direction:column;gap:6px;font-size:13px;min-width:0}
+  .lg{display:flex;align-items:center;gap:8px;color:var(--ink-2)}
+  .lg .sw{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+  .lg b{color:var(--ink)}
+  @media (max-width:860px){
+    .side{display:none}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+    .topbar .brand{padding:0}
+    .content{padding:18px 16px}
+    .cols{grid-template-columns:1fr}
+    .invoice,.statusdoc{padding:20px}
+    .invoice .parties{grid-template-columns:1fr}
+    .itotals{width:100%}
+    .kv{grid-template-columns:130px 1fr}
+    .mnav{display:flex;gap:4px}
+    .mnav a{padding:7px 9px;border-radius:8px;color:var(--ink-2);font-weight:700;font-size:13px}
+    .mnav a.active{background:var(--accent);color:var(--accent-ink)}
+  }
+  @media print{
+    .side,.topbar,.actions,.noprint,#toast{display:none!important}
+    html,body,.app,.main{height:auto!important;min-height:0!important}
+    .content{padding:0;max-width:none;min-height:0!important}
+    .card{box-shadow:none}
+    .invoice,.statusdoc{border:none;box-shadow:none;padding:0;max-width:none}
+  }
+</style>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="mark"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="16" r="4"/><circle cx="18" cy="16" r="4"/><path d="M6 16h5l-2-8h6l3 8M11 16l4-8"/><path d="M7.5 8h3"/></svg></span> <span class="brandname">Your shop</span></div>
+    <div class="shopinfo" id="shopinfo"></div>
+    <nav class="nav" id="nav">
+      <a href="#/" data-k="dash"><span class="ic">▤</span> Dashboard</a>
+      <a href="#/orders" data-k="orders"><span class="ic">◎</span> Build Queue</a>
+      <a href="#/customers" data-k="customers"><span class="ic">☻</span> Customers</a>
+      <a href="#/invoices" data-k="invoices"><span class="ic">＄</span> Invoices</a>
+      <a href="#/settings" data-k="settings"><span class="ic">⚙</span> Settings</a>
+    </nav>
+    <div class="spacer"></div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="brand"><span class="mark"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="16" r="4"/><circle cx="18" cy="16" r="4"/><path d="M6 16h5l-2-8h6l3 8M11 16l4-8"/><path d="M7.5 8h3"/></svg></span> <span class="brandname">Your shop</span></div>
+      <nav class="mnav" id="mnav">
+        <a href="#/" data-k="dash">Dash</a>
+        <a href="#/orders" data-k="orders">Queue</a>
+        <a href="#/customers" data-k="customers">Customers</a>
+        <a href="#/invoices" data-k="invoices">Invoices</a>
+        <a href="#/settings" data-k="settings">⚙</a>
+      </nav>
+    </div>
+    <main class="content" id="app"></main>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------- constants ---------- */
+const STAGES = ["Consult","Design","Tubing prep","Mitering","Tacking","Brazing","Alignment","Frame prep","Paint","Assembly","Packaging","Shipped","Delivered","Done"];
+const DONE_STAGES = ["Delivered","Done"];
+const OPEN_STAGES = STAGES.filter(s=>!DONE_STAGES.includes(s));
+const STAGE_MIGRATION = {"Inquiry":"Consult","Fit":"Consult","Quote":"Design","Deposit":"Design","Queue":"Tubing prep","Fabrication":"Brazing","Parts":"Assembly","QC":"Frame prep","Ready":"Packaging","Closed":"Done","Finishing work":"Frame prep"};
+const STATUS_MSG = {"Consult":"We're finalizing the details and plan for your build.","Design":"Your frame geometry is being designed.","Tubing prep":"Selecting and preparing the tubing for your frame.","Mitering":"Cutting and coping your tubes for a precise fit.","Tacking":"Tacking the frame together and checking fit.","Brazing":"Brazing the joints — your frame is taking shape.","Alignment":"Checking and aligning the frame.","Frame prep":"Prepping the frame for paint — cleanup and filing.","Paint":"Your frame is in paint and finishing.","Assembly":"Building up your bike with its components.","Packaging":"Packing your bike carefully for delivery.","Shipped":"Your bike is on its way to you!","Delivered":"Your bike has been delivered — enjoy the ride!","Done":"Your build is complete. Thank you!"};
+const TYPES = ["Custom frame","Custom build","Repair / service","Warranty"];
+const DISCIPLINES = ["Road","Gravel","All-road","Cyclocross","MTB XC","MTB Trail","Track","Touring","Commuter","Randonneur"];
+const MATERIALS = ["Steel","Stainless steel","Titanium","Carbon","Aluminum","Mixed"];
+const FIT_FIELDS = [
+  ["height","Height"],["inseam","Inseam"],["torso","Torso"],["armLength","Arm length"],
+  ["shoulderWidth","Shoulder width"],["thigh","Thigh"],["lowerLeg","Lower leg"],["footLength","Foot length"],
+  ["sitBoneWidth","Sit-bone width"],["flexibility","Flexibility"],
+  ["saddleHeight","Saddle height*"],["saddleSetback","Saddle setback*"],["barDrop","Bar drop*"],["barReach","Bar reach*"]
+];
+const GEO_FIELDS = [
+  ["stack","Stack"],["reach","Reach"],["tt","Top tube (eff)"],["st","Seat tube"],
+  ["htAngle","Head angle"],["staAngle","Seat angle"],["chainstay","Chainstay"],["wheelbase","Wheelbase"],
+  ["standover","Standover"],["bbDrop","BB drop"],["forkRake","Fork rake"],["trail","Trail"]
+];
+
+/* ---------- tiny IndexedDB layer ---------- */
+const DB_NAME="buildbook", DB_VER=2;
+let _db=null;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains("customers")) db.createObjectStore("customers",{keyPath:"id"});
+      if(!db.objectStoreNames.contains("orders")) db.createObjectStore("orders",{keyPath:"id"});
+      if(!db.objectStoreNames.contains("assets")){
+        const s=db.createObjectStore("assets",{keyPath:"id"});
+        s.createIndex("orderId","orderId",{unique:false});
+      }
+      if(!db.objectStoreNames.contains("invoices")){
+        const s=db.createObjectStore("invoices",{keyPath:"id"});
+        s.createIndex("customerId","customerId",{unique:false});
+      }
+      if(!db.objectStoreNames.contains("settings")) db.createObjectStore("settings",{keyPath:"id"});
+    };
+    r.onsuccess=e=>{_db=e.target.result;_db.onversionchange=()=>{try{_db.close();}catch(_){}};res(_db)};
+    r.onerror=e=>rej(e.target.error);
+    r.onblocked=()=>rej(new Error("Database upgrade is blocked — this app is open in another browser tab."));
+  });
+}
+function tx(store,mode){return _db.transaction(store,mode).objectStore(store);}
+function pr(req){return new Promise((res,rej)=>{req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);});}
+const dbAll=s=>pr(tx(s,"readonly").getAll());
+const dbGet=(s,id)=>pr(tx(s,"readonly").get(id));
+const dbPut=(s,o)=>pr(tx(s,"readwrite").put(o));
+const dbDel=(s,id)=>pr(tx(s,"readwrite").delete(id));
+function dbByOrder(orderId){return pr(tx("assets","readonly").index("orderId").getAll(orderId));}
+async function dbDelOrderAssets(orderId){const a=await dbByOrder(orderId);for(const x of a)await dbDel("assets",x.id);}
+async function migrateStages(){const orders=await dbAll("orders");for(const o of orders){if(o.stage&&!STAGES.includes(o.stage)){o.stage=STAGE_MIGRATION[o.stage]||"Consult";await dbPut("orders",o);}}}
+
+/* ---------- helpers ---------- */
+const uid=()=> (crypto.randomUUID?crypto.randomUUID():"id-"+Date.now()+"-"+Math.floor(Math.random()*1e6));
+const now=()=>new Date().toISOString();
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+function esc(v){return (v==null?"":String(v)).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function money(n){const x=Number(n||0);return "$"+x.toLocaleString(undefined,{maximumFractionDigits:0});}
+function parseDate(iso){if(!iso)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(iso)){const p=iso.split("-").map(Number);return new Date(p[0],p[1]-1,p[2]);}const d=new Date(iso);return isNaN(d)?null:d;}
+function fdate(iso){const d=parseDate(iso);return d?d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}):"—";}
+function daysUntil(iso){const d=parseDate(iso);if(!d)return null;return Math.round((d.setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/864e5);}
+function fields(obj){const o={};for(const [k,v] of new FormData(obj).entries())o[k]=typeof v==="string"?v.trim():v;return o;}
+function stageChip(stage){const cls=DONE_STAGES.includes(stage)?"good":(stage==="Packaging"||stage==="Shipped"?"warn":"stage");return `<span class="chip ${cls}"><span class="dot"></span>${esc(stage)}</span>`;}
+function bomTotal(o){return (Array.isArray(o.bom)?o.bom:[]).reduce((s,b)=>s+Number(b.price||0),0);}
+function assetUrl(a){try{return a&&a.blob instanceof Blob?URL.createObjectURL(a.blob):"";}catch(_){return "";}}
+function downscaleImg(src,max){return new Promise(res=>{if(!src)return res("");const img=new Image();img.onload=()=>{try{let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)return res(src);if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}const c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);res(c.toDataURL("image/jpeg",0.82));}catch(_){res("");}};img.onerror=()=>res("");img.src=src;});}
+function downscaleBlob(blob,max){return new Promise(res=>{if(!(blob instanceof Blob)||!(blob.type||"").startsWith("image/"))return res(blob);const url=URL.createObjectURL(blob);const img=new Image();img.onload=()=>{try{let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h){URL.revokeObjectURL(url);return res(blob);}if(w<=max&&h<=max&&blob.size<800000){URL.revokeObjectURL(url);return res(blob);}if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}const c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);c.toBlob(b=>{URL.revokeObjectURL(url);res(b&&b.size<blob.size?b:blob);},"image/jpeg",0.85);}catch(_){URL.revokeObjectURL(url);res(blob);}};img.onerror=()=>{URL.revokeObjectURL(url);res(blob);};img.src=url;});}
+async function migrateImages(){try{const assets=await dbAll("assets");for(const a of assets){if(a.blob instanceof Blob&&(a.type||"").startsWith("image/")&&a.blob.size>800000){const b=await downscaleBlob(a.blob,1600);if(b&&b.size<a.blob.size){a.blob=b;a.type="image/jpeg";await dbPut("assets",a);}}}const bp=await getBuilder();if(bp&&typeof bp.logo==="string"&&bp.logo.length>500000){const d=await downscaleImg(bp.logo,600);if(d&&d.length<bp.logo.length){bp.logo=d;await dbPut("settings",bp);renderShopInfo(bp);}}}catch(_){}}
+async function printEl(sel,title){
+  const el=document.querySelector(sel);if(!el){window.print();return;}
+  const imgs=[...el.querySelectorAll("img")];
+  const orig=imgs.map(im=>im.getAttribute("src"));
+  // swap every image for a downscaled copy so the PDF stays small and valid, then restore
+  await Promise.all(imgs.map((im,i)=>new Promise(r=>{downscaleImg(orig[i]||"",1100).then(d=>{if(d){im.onload=im.onerror=()=>r();im.setAttribute("src",d);}else r();}).catch(()=>r());})));
+  const oldT=document.title;if(title)document.title=title;
+  try{window.print();}catch(_){}
+  setTimeout(()=>{document.title=oldT;imgs.forEach((im,i)=>{im.onload=im.onerror=null;if(orig[i]!=null)im.setAttribute("src",orig[i]);});},700);
+}
+/* ---------- tiny charts (no libraries) ---------- */
+const PALETTE=["#e8590c","#1a9e8f","#3b82f6","#8b5cf6","#1a7f4b","#b7791f","#c0392b","#7a8699"];
+function lastMonths(n){const out=[],now=new Date();for(let i=n-1;i>=0;i--){const x=new Date(now.getFullYear(),now.getMonth()-i,1);out.push({key:`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}`,label:x.toLocaleString(undefined,{month:"short"})});}return out;}
+function tally(arr){const m={};arr.forEach(v=>{m[v]=(m[v]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value}));}
+function svgBars(data,fmt){
+  const w=520,h=200,pl=12,pr=12,pt=22,pb=26,iw=w-pl-pr,ih=h-pt-pb;
+  const max=Math.max(1,...data.map(d=>d.value)),n=data.length||1,gap=iw/n,bw=Math.min(54,gap*0.62);
+  let s=`<line x1="${pl}" y1="${pt+ih}" x2="${w-pr}" y2="${pt+ih}" stroke="var(--line)"/>`;
+  data.forEach((d,i)=>{const bh=d.value/max*ih,x=pl+gap*i+(gap-bw)/2,y=pt+ih-bh;
+    s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="3" fill="var(--accent)"/>`;
+    if(d.value)s+=`<text x="${(x+bw/2).toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--ink-2)">${fmt?fmt(d.value):d.value}</text>`;
+    s+=`<text x="${(x+bw/2).toFixed(1)}" y="${(pt+ih+16).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--ink-2)">${esc(d.label)}</text>`;});
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block;max-width:100%">${s}</svg>`;
+}
+function hbars(data,fmt){const max=Math.max(1,...data.map(d=>d.value));return `<div class="hbars">${data.map(d=>`<div class="hbar"><div class="hbar-l" title="${esc(d.label)}">${esc(d.label)}</div><div class="hbar-track"><div class="hbar-fill" style="width:${d.value?Math.max(4,Math.round(d.value/max*100)):0}%"></div></div><div class="hbar-v">${fmt?fmt(d.value):d.value}</div></div>`).join("")}</div>`;}
+function donut(data){
+  const total=data.reduce((s,d)=>s+d.value,0)||1,R=42,C=2*Math.PI*R;let off=0,segs="";
+  data.forEach((d,i)=>{const len=d.value/total*C;segs+=`<circle cx="60" cy="60" r="${R}" fill="none" stroke="${PALETTE[i%PALETTE.length]}" stroke-width="15" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 60 60)"/>`;off+=len;});
+  const legend=data.map((d,i)=>`<div class="lg"><span class="sw" style="background:${PALETTE[i%PALETTE.length]}"></span>${esc(d.label)} <b>${d.value}</b></div>`).join("");
+  return `<div class="donut-wrap"><svg viewBox="0 0 120 120" width="118" height="118" style="flex:0 0 auto">${segs}<text x="60" y="57" text-anchor="middle" font-size="21" font-weight="800" fill="var(--ink)">${total}</text><text x="60" y="73" text-anchor="middle" font-size="9" fill="var(--ink-2)">total</text></svg><div class="donut-legend">${legend}</div></div>`;
+}
+function extUrl(v){if(!v)return null;v=String(v).trim();return /^https?:\/\//i.test(v)?v:null;}
+function igUrl(v){if(!v)return null;v=String(v).trim();return /^https?:\/\//i.test(v)?v:"https://instagram.com/"+v.replace(/^@/,"");}
+function webUrl(v){if(!v)return null;v=String(v).trim();if(/^https?:\/\//i.test(v))return v;return /^[\w-]+(\.[\w-]+)+/.test(v)?"https://"+v:null;}
+function socialRow(l,val,url){return val?`<dt>${l}</dt><dd>${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-weight:650">${esc(val)}</a>`:esc(val)}</dd>`:"";}
+function toast(msg){let t=$("#toast");if(!t){t=document.createElement("div");t.id="toast";t.style.cssText="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:650;z-index:99;box-shadow:var(--shadow)";document.body.appendChild(t);}t.textContent=msg;t.style.opacity="1";clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity="0",1600);}
+
+/* ---------- router ---------- */
+function parseHash(){
+  const h=location.hash.replace(/^#/,"")||"/";
+  const [path,q]=h.split("?");
+  const parts=path.split("/").filter(Boolean); // ["orders","<id>","edit"]
+  const query={};if(q)for(const kv of q.split("&")){const [k,v]=kv.split("=");query[k]=decodeURIComponent(v||"");}
+  return {parts,query};
+}
+async function router(){
+  const {parts,query}=parseHash();
+  const [a,b,c]=parts;
+  markNav(a||"dash");
+  try{
+    if(!a) return viewDashboard();
+    if(a==="customers"){
+      if(!b) return viewCustomers();
+      if(b==="new") return viewCustomerForm(null);
+      if(c==="edit") return viewCustomerForm(b);
+      return viewCustomerDetail(b);
+    }
+    if(a==="orders"){
+      if(!b) return viewBoard();
+      if(b==="new") return viewOrderForm(null,query);
+      if(c==="edit") return viewOrderForm(b,query);
+      if(c==="status") return viewBuildStatus(b);
+      return viewOrderDetail(b);
+    }
+    if(a==="invoices"){
+      if(!b) return viewInvoices();
+      if(b==="new") return viewInvoiceForm(null,query);
+      if(c==="edit") return viewInvoiceForm(b,query);
+      if(c==="deposit") return viewInvoiceDeposit(b);
+      return viewInvoiceDetail(b);
+    }
+    if(a==="builder") return viewBuilderForm();
+    if(a==="settings") return viewSettings();
+    viewDashboard();
+  }catch(err){ $("#app").innerHTML=`<div class="empty">Something went wrong: ${esc(err.message)}</div>`; console.error(err); }
+}
+function markNav(k){$$("#nav a,#mnav a").forEach(x=>x.classList.toggle("active",x.dataset.k===k||(k==="dash"&&x.dataset.k==="dash")));}
+function show(html,init){const app=$("#app");app.innerHTML=html;window.scrollTo(0,0);if(init)init(app);}
+function go(hash){location.hash=hash;}
+
+/* ---------- Dashboard ---------- */
+let dashPanels={},dashCur="";
+function dashToggle(k){const det=document.getElementById("dashDetail");if(!det)return;if(dashCur===k){det.innerHTML="";dashCur="";}else{det.innerHTML=dashPanels[k]||"";dashCur=k;}document.querySelectorAll("#kpis .tile").forEach(t=>t.classList.toggle("active",t.dataset.k===dashCur));}
+async function viewDashboard(){
+  const [orders,customers,invoices]=await Promise.all([dbAll("orders"),dbAll("customers"),dbAll("invoices")]);
+  const active=orders.filter(o=>!DONE_STAGES.includes(o.stage));
+  const pipeline=active.reduce((s,o)=>s+bomTotal(o),0);
+  const collected=invoices.reduce((s,i)=>s+invPaid(i),0);
+  const outstanding=invoices.filter(i=>i.status!=="Paid").reduce((s,i)=>s+Math.max(0,invBalance(i)),0);
+  const overdue=active.filter(o=>{const d=daysUntil(o.promisedDate);return d!=null&&d<0;}).sort((a,b)=>(a.promisedDate||"").localeCompare(b.promisedDate||""));
+  const avgVal=active.length?Math.round(pipeline/active.length):0;
+  const cmap=Object.fromEntries(customers.map(c=>[c.id,c]));
+  const soon=[...active].filter(o=>o.promisedDate).sort((a,b)=>(a.promisedDate||"").localeCompare(b.promisedDate||"")).slice(0,6);
+  const months=lastMonths(6);
+  const rev=months.map(m=>({label:m.label,value:0})), nb=months.map(m=>({label:m.label,value:0}));
+  invoices.forEach(inv=>invPaymentList(inv).forEach(p=>{if(p.date){const i=months.findIndex(m=>m.key===String(p.date).slice(0,7));if(i>=0)rev[i].value+=Number(p.amount||0);}}));
+  orders.forEach(o=>{if(o.createdAt){const i=months.findIndex(m=>m.key===String(o.createdAt).slice(0,7));if(i>=0)nb[i].value++;}});
+  const byStageCount=OPEN_STAGES.map(s=>({label:s,value:active.filter(o=>o.stage===s).length})).filter(x=>x.value>0);
+  const byStageValue=OPEN_STAGES.map(s=>({label:s,value:active.filter(o=>o.stage===s).reduce((x,o)=>x+bomTotal(o),0)})).filter(x=>x.value>0);
+  const buildVals=active.map(o=>({label:o.title||"Untitled",value:bomTotal(o)})).sort((a,b)=>b.value-a.value);
+  const unpaid=invoices.filter(i=>i.status!=="Paid"&&invBalance(i)>0).sort((a,b)=>invBalance(b)-invBalance(a));
+  const noData='<div class="muted">No data yet.</div>';
+  const card=(t,body)=>`<div class="card"><div class="hd">${t}</div><div class="bd">${body}</div></div>`;
+  dashPanels={
+    active:card("Active builds",`<h2 style="margin:0 0 8px;font-size:14px">Pipeline by stage</h2>${byStageCount.length?hbars(byStageCount):noData}<h2 style="margin:22px 0 6px;font-size:14px">New builds · last 6 months</h2>${orders.length?svgBars(nb):noData}`),
+    pipeline:card("Pipeline value by stage",byStageValue.length?hbars(byStageValue,money):noData),
+    avg:card("Active build values",buildVals.length?`<p class="muted" style="margin:0 0 12px">Average ${money(avgVal)} across ${active.length} active build${active.length===1?"":"s"}.</p>`+hbars(buildVals,money):noData),
+    collected:card("Revenue collected · last 6 months",collected?svgBars(rev,money):noData),
+    outstanding:card("Unpaid invoices",unpaid.length?`<table><thead><tr><th>#</th><th>Customer</th><th style="text-align:right">Balance</th></tr></thead><tbody>${unpaid.map(i=>`<tr onclick="go('#/invoices/${i.id}')"><td><b>${esc(i.number||"—")}</b></td><td class="muted">${esc(cmap[i.customerId]?.name||"—")}</td><td style="text-align:right;font-weight:700">${money(invBalance(i))}</td></tr>`).join("")}</tbody></table>`:'<div class="muted">Nothing outstanding.</div>'),
+    overdue:card("Overdue builds",overdue.length?`<table><thead><tr><th>Build</th><th>Customer</th><th>Promised</th></tr></thead><tbody>${overdue.map(o=>{const d=daysUntil(o.promisedDate);return `<tr onclick="go('#/orders/${o.id}')"><td><b>${esc(o.title||"Untitled")}</b></td><td class="muted">${esc(cmap[o.customerId]?.name||"—")}</td><td style="color:var(--bad);font-weight:700">${fdate(o.promisedDate)} (${Math.abs(d)}d late)</td></tr>`;}).join("")}</tbody></table>`:'<div class="muted">Nothing overdue.</div>')
+  };
+  dashCur="";
+  const tile=(k,label,val,style)=>`<div class="tile click" data-k="${k}" onclick="dashToggle('${k}')"><div class="k">${label} <span class="car">▾</span></div><div class="v"${style?` style="${style}"`:""}>${val}</div></div>`;
+  show(`
+    <div class="between"><div><h1>Dashboard</h1><p class="sub">Tap any metric to expand it.</p></div>
+      <a class="btn pri" href="#/orders/new">＋ New build</a></div>
+    <div class="grid stats" id="kpis">
+      ${tile("active","Active builds",active.length)}
+      ${tile("pipeline","Pipeline value",money(pipeline))}
+      ${tile("avg","Avg build value",money(avgVal))}
+      ${tile("collected","Collected",money(collected))}
+      ${tile("outstanding","Outstanding",money(outstanding))}
+      ${tile("overdue","Overdue",overdue.length,overdue.length?"color:var(--bad)":"")}
+    </div>
+    <div id="dashDetail" style="margin-top:14px"></div>
+    <div class="cols" style="margin-top:14px">
+      <div class="card"><div class="hd">Build queue · newest first</div><div class="bd tight">
+        ${active.length?`<table><tbody>
+        ${active.slice().sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).map(o=>`<tr onclick="go('#/orders/${o.id}')"><td><b>${esc(o.title||"Untitled")}</b><div class="muted" style="font-size:12px">${esc(cmap[o.customerId]?.name||"")}</div></td><td>${stageChip(o.stage)}</td><td class="muted" style="text-align:right">${fdate(o.createdAt)}</td></tr>`).join("")}
+        </tbody></table>`:`<div class="empty">No active builds.</div>`}
+      </div></div>
+      <div class="card"><div class="hd">Upcoming deliveries</div><div class="bd tight">
+        ${soon.length?`<table><thead><tr><th>Build</th><th>Customer</th><th>Stage</th><th>Promised</th></tr></thead><tbody>
+        ${soon.map(o=>{const d=daysUntil(o.promisedDate);const late=d!=null&&d<0;return `<tr onclick="go('#/orders/${o.id}')"><td><b>${esc(o.title||"Untitled")}</b></td><td class="muted">${esc(cmap[o.customerId]?.name||"—")}</td><td>${stageChip(o.stage)}</td><td style="${late?'color:var(--bad);font-weight:700':''}">${fdate(o.promisedDate)}${late?` (${Math.abs(d)}d late)`:d!=null?` (${d}d)`:''}</td></tr>`;}).join("")}
+        </tbody></table>`:`<div class="empty">No dated builds yet.</div>`}
+      </div></div>
+    </div>
+    <p class="sub" style="margin-top:14px">${customers.length} customer${customers.length===1?"":"s"} · ${orders.length} total build${orders.length===1?"":"s"} · ${invoices.length} invoice${invoices.length===1?"":"s"}</p>
+  `);
+}
+
+/* ---------- Customers ---------- */
+async function viewCustomers(){
+  const cs=(await dbAll("customers")).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  const orders=await dbAll("orders");
+  const count=id=>orders.filter(o=>o.customerId===id).length;
+  show(`
+    <div class="between"><div><h1>Customers</h1><p class="sub">Contact, fit, and everything they want.</p></div>
+      <a class="btn pri" href="#/customers/new">＋ New customer</a></div>
+    <div class="card"><div class="bd tight">
+    ${cs.length?`<table><thead><tr><th>Name</th><th>Contact</th><th>Builds</th><th>Added</th></tr></thead><tbody>
+      ${cs.map(c=>`<tr onclick="go('#/customers/${c.id}')">
+        <td><b>${esc(c.name||"—")}</b></td>
+        <td class="muted">${esc(c.email||c.phone||c.instagram||c.strava||c.website||"—")}</td>
+        <td>${count(c.id)}</td>
+        <td class="muted">${fdate(c.createdAt)}</td></tr>`).join("")}
+      </tbody></table>`:`<div class="empty">No customers yet. <a class="btn sm pri" href="#/customers/new" style="margin-left:8px">Add the first one</a></div>`}
+    </div></div>`);
+}
+
+async function viewCustomerForm(id){
+  const c=id?await dbGet("customers",id):{};
+  const opt=(v,cur)=>`<option ${v===cur?"selected":""}>${esc(v)}</option>`;
+  show(`
+    <a class="backlink" href="${id?`#/customers/${id}`:'#/customers'}">← Back</a>
+    <div class="between"><h1>${id?"Edit":"New"} customer</h1><button type="submit" form="cform" class="btn pri">Save customer</button></div>
+    <form id="cform" class="form">
+      <fieldset><legend>Contact</legend><div class="fgrid">
+        <div class="field"><label>Name</label><input name="name" value="${esc(c.name)}" required></div>
+        <div class="field"><label>Pronouns</label><input name="pronouns" value="${esc(c.pronouns)}" placeholder="they/them"></div>
+        <div class="field"><label>Phone</label><input name="phone" value="${esc(c.phone)}"></div>
+        <div class="field"><label>Email</label><input name="email" type="email" value="${esc(c.email)}"></div>
+        <div class="field wide"><label>Address</label><input name="address" value="${esc(c.address)}"></div>
+        <div class="field"><label>Preferred contact</label><select name="preferredContact">${["","Email","Phone","Text","Instagram","Strava"].map(v=>opt(v,c.preferredContact)).join("")}</select></div>
+        <div class="field"><label>How they found you</label><input name="referralSource" value="${esc(c.referralSource)}" placeholder="Referral, IG, shop walk-in…"></div>
+        <div class="field"><label>Instagram</label><input name="instagram" value="${esc(c.instagram)}" placeholder="@handle"></div>
+        <div class="field"><label>Strava</label><input name="strava" value="${esc(c.strava)}" placeholder="Profile URL or athlete ID"></div>
+        <div class="field"><label>Website / other social</label><input name="website" value="${esc(c.website)}" placeholder="https://…"></div>
+      </div></fieldset>
+      <fieldset><legend>Fit measurements <span class="hint" style="font-weight:500">— * = from current bike</span></legend><div class="fgrid">
+        ${FIT_FIELDS.map(([k,lbl])=>`<div class="field"><label>${lbl}</label><input name="fit_${k}" value="${esc(c.fit?.[k])}"></div>`).join("")}
+      </div></fieldset>
+      <div class="actions">
+        <button class="btn pri" type="submit">Save customer</button>
+        <a class="btn" href="${id?`#/customers/${id}`:'#/customers'}">Cancel</a>
+      </div>
+    </form>`, ()=>{
+      $("#cform").addEventListener("submit",async e=>{
+        e.preventDefault();
+        const f=fields(e.target);
+        const rec=id?await dbGet("customers",id):{id:uid(),createdAt:now(),notes:[]};
+        rec.fit=rec.fit||{};
+        for(const k in f){ if(k.startsWith("fit_"))rec.fit[k.slice(4)]=f[k]; else rec[k]=f[k]; }
+        rec.updatedAt=now();
+        await dbPut("customers",rec);
+        toast("Customer saved"); go(`#/customers/${rec.id}`);
+      });
+    });
+}
+
+async function viewCustomerDetail(id){
+  const c=await dbGet("customers",id);
+  if(!c) return show(`<div class="empty">Customer not found.</div>`);
+  const orders=(await dbAll("orders")).filter(o=>o.customerId===id).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  const fitRows=FIT_FIELDS.filter(([k])=>c.fit?.[k]).map(([k,l])=>`<dt>${l}</dt><dd>${esc(c.fit[k])}</dd>`).join("");
+  const kv=(l,v)=>v?`<dt>${l}</dt><dd>${esc(v)}</dd>`:"";
+  show(`
+    <a class="backlink" href="#/customers">← Customers</a>
+    <div class="between"><div><h1>${esc(c.name)}</h1><p class="sub">${[c.pronouns].filter(Boolean).map(esc).join(" · ")||"Customer"}</p></div>
+      <div class="actions"><a class="btn" href="#/customers/${id}/edit">Edit</a><a class="btn pri" href="#/orders/new?customer=${id}">＋ New build</a></div></div>
+    <div class="cols">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="hd">Contact</div><div class="bd"><dl class="kv">
+          ${kv("Phone",c.phone)}${kv("Email",c.email)}${kv("Address",c.address)}${kv("Preferred",c.preferredContact)}${kv("Found via",c.referralSource)}
+          ${socialRow("Instagram",c.instagram,igUrl(c.instagram))}
+          ${socialRow("Strava",c.strava,extUrl(c.strava))}
+          ${socialRow("Website",c.website,webUrl(c.website))}
+          ${!(c.phone||c.email||c.address||c.instagram||c.strava||c.website)?'<dd class="muted">No contact info yet.</dd>':''}
+        </dl></div></div>
+        <div class="card"><div class="hd">Notes <button class="btn sm" onclick="addNote('${id}')">＋ Add note</button></div><div class="bd">
+          ${(c.notes||[]).length?[...c.notes].reverse().map(n=>`<div class="note"><div class="nt">${fdate(n.ts)}</div>${esc(n.text)}</div>`).join(""):'<div class="muted">No notes yet.</div>'}
+        </div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="hd">Fit measurements</div><div class="bd">
+          ${fitRows?`<dl class="kv">${fitRows}</dl>`:'<div class="muted">No measurements recorded.</div>'}
+        </div></div>
+        <div class="card"><div class="hd">Builds (${orders.length})</div><div class="bd tight">
+          ${orders.length?`<table><tbody>${orders.map(o=>`<tr onclick="go('#/orders/${o.id}')"><td><b>${esc(o.title||"Untitled")}</b><div class="muted" style="font-size:12px">${esc(o.type||"")}</div></td><td style="text-align:right">${stageChip(o.stage)}</td></tr>`).join("")}</tbody></table>`:'<div class="empty">No builds yet.</div>'}
+        </div></div>
+      </div>
+    </div>`);
+}
+async function addNote(id){
+  const text=prompt("Add a note:");if(!text)return;
+  const c=await dbGet("customers",id);c.notes=c.notes||[];c.notes.push({ts:now(),text:text.trim()});await dbPut("customers",c);toast("Note added");router();
+}
+
+/* ---------- Orders: board ---------- */
+let boardSort="newest";
+function sortBuilds(list){const arr=list.slice();const s=boardSort;
+  if(s==="oldest")arr.sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||""));
+  else if(s==="promised")arr.sort((a,b)=>(a.promisedDate||"9999-99-99").localeCompare(b.promisedDate||"9999-99-99"));
+  else if(s==="name")arr.sort((a,b)=>(a.title||"").localeCompare(b.title||""));
+  else if(s==="value")arr.sort((a,b)=>bomTotal(b)-bomTotal(a));
+  else arr.sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  return arr;}
+async function viewBoard(){
+  const [orders,customers]=await Promise.all([dbAll("orders"),dbAll("customers")]);
+  const cmap=Object.fromEntries(customers.map(c=>[c.id,c]));
+  const lanes=OPEN_STAGES.map(s=>[s,sortBuilds(orders.filter(o=>o.stage===s))]);
+  const done=sortBuilds(orders.filter(o=>DONE_STAGES.includes(o.stage)));
+  show(`
+    <div class="between"><div><h1>Build Queue</h1><p class="sub">Every active build and what stage it's in.</p></div>
+      <div class="actions" style="align-items:center"><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)">Sort <select onchange="boardSort=this.value;router()">${[["newest","Newest"],["oldest","Oldest"],["promised","Promised date"],["name","Name (A–Z)"],["value","Value (high–low)"]].map(([v,l])=>`<option value="${v}" ${boardSort===v?"selected":""}>${l}</option>`).join("")}</select></label><a class="btn pri" href="#/orders/new">＋ New build</a></div></div>
+    ${orders.length===0?`<div class="card"><div class="empty">No builds yet. <a class="btn sm pri" href="#/orders/new" style="margin-left:8px">Start one</a></div></div>`:`
+    <div class="board">
+      ${lanes.map(([s,list])=>`<div class="lane"><div class="lh"><span>${esc(s)}</span><span class="muted">${list.length}</span></div><div class="lb">
+        ${list.map(o=>{const d=daysUntil(o.promisedDate);const late=d!=null&&d<0&&!DONE_STAGES.includes(o.stage);return `<div class="oc" onclick="go('#/orders/${o.id}')">
+          <div class="t">${esc(o.title||"Untitled")}</div>
+          <div class="m">${esc(cmap[o.customerId]?.name||"—")}${bomTotal(o)?` · ${money(bomTotal(o))}`:""}</div>
+          ${o.blocker?`<div class="blk">⚠ ${esc(o.blocker)}</div>`:""}
+          ${o.promisedDate?`<div class="m" style="${late?'color:var(--bad);font-weight:700':''}">${late?"⏰ ":""}${fdate(o.promisedDate)}</div>`:""}
+        </div>`;}).join("")||'<div class="muted" style="font-size:12px;padding:4px">—</div>'}
+      </div></div>`).join("")}
+    </div>
+    ${done.length?`<h2>Completed (${done.length})</h2><div class="card"><div class="bd tight"><table><tbody>
+      ${done.map(o=>`<tr onclick="go('#/orders/${o.id}')"><td><b>${esc(o.title)}</b></td><td class="muted">${esc(cmap[o.customerId]?.name||"—")}</td><td style="text-align:right">${stageChip(o.stage)}</td></tr>`).join("")}
+    </tbody></table></div></div>`:""}`}`);
+}
+
+/* ---------- Orders: form ---------- */
+let bomDraft=[];
+async function viewOrderForm(id,query){
+  const o=id?await dbGet("orders",id):{};
+  const customers=(await dbAll("customers")).sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+  const preCust=query&&query.customer;
+  const builder=await getBuilder();const shopName=builder.shopName||builder.builderName||"";
+  bomDraft=(o.bom&&o.bom.length)?JSON.parse(JSON.stringify(o.bom)):[];
+  const btype=o.type||"Custom frame";
+  if(!bomDraft.some(b=>b.category==="Frame")&&(btype==="Custom frame"||btype==="Custom build")){
+    bomDraft.unshift({id:uid(),category:"Frame",item:o.title||"",brand:shopName,price:"",status:"Planned",_auto:true});
+  }
+  const opt=(v,cur)=>`<option ${v===cur?"selected":""}>${esc(v)}</option>`;
+  show(`
+    <a class="backlink" href="${id?`#/orders/${id}`:'#/orders'}">← Back</a>
+    <div class="between"><h1>${id?"Edit":"New"} build</h1><button type="submit" form="oform" class="btn pri">Save build</button></div>
+    <form id="oform" class="form">
+      <fieldset><legend>Overview</legend><div class="fgrid">
+        <div class="field wide"><label>Title</label><input name="title" value="${esc(o.title)}" placeholder="e.g. All-road Ti disc" required></div>
+        <div class="field"><label>Customer</label><select name="customerId" required><option value="">— select —</option>
+          ${customers.map(c=>`<option value="${c.id}" ${(o.customerId||preCust)===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
+        </select></div>
+        <div class="field"><label>Type</label><select name="type">${TYPES.map(v=>opt(v,o.type)).join("")}</select></div>
+        <div class="field"><label>Stage</label><select name="stage">${STAGES.map(v=>opt(v,o.stage||"Consult")).join("")}</select></div>
+        <div class="field"><label>Promised date</label><input name="promisedDate" type="date" value="${o.promisedDate?esc(o.promisedDate.slice(0,10)):""}"></div>
+        <div class="field wide"><label>Blocker / waiting on</label><input name="blocker" value="${esc(o.blocker)}" placeholder="Waiting on tubing / paint / customer decision…"></div>
+      </div></fieldset>
+      <fieldset><legend>Spec</legend><div class="fgrid">
+        <div class="field"><label>Frame material</label><select name="frameMaterial"><option value=""></option>${MATERIALS.map(v=>opt(v,o.frameMaterial)).join("")}</select></div>
+        <div class="field"><label>Tubing</label><input name="tubing" value="${esc(o.tubing)}"></div>
+        <div class="field"><label>Groupset</label><input name="groupset" value="${esc(o.groupset)}"></div>
+        <div class="field"><label>Wheels</label><input name="wheels" value="${esc(o.wheels)}"></div>
+        <div class="field"><label>Cockpit</label><input name="cockpit" value="${esc(o.cockpit)}"></div>
+        <div class="field"><label>Saddle</label><input name="saddle" value="${esc(o.saddle)}"></div>
+        <div class="field"><label>Tires</label><input name="tires" value="${esc(o.tires)}"></div>
+        <div class="field"><label>Finish / paint</label><input name="finish" value="${esc(o.finish)}"></div>
+        <div class="field wide"><label>Spec summary</label><textarea name="specSummary">${esc(o.specSummary)}</textarea></div>
+      </div></fieldset>
+      <fieldset><legend>Bill of materials</legend>
+        <div id="bom"></div>
+        <button type="button" class="btn sm" onclick="bomAdd()">＋ Add line</button>
+      </fieldset>
+      <fieldset><legend>Geometry <span class="hint" style="font-weight:500">— from BikeCAD</span></legend>
+        <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap">
+          <div class="field" style="flex:1;min-width:240px"><label>Paste BikeCAD geometry table</label><textarea id="geoPaste" placeholder="Copy the geometry chart out of BikeCAD and paste here — one value per line, e.g.&#10;Stack   595&#10;Reach   382&#10;Head tube angle   71.5" style="min-height:54px"></textarea></div>
+          <button type="button" class="btn" onclick="extractGeoToForm()">Extract &amp; fill ↓</button>
+        </div>
+        <div class="fgrid">
+        ${GEO_FIELDS.map(([k,l])=>`<div class="field"><label>${l}</label><input name="geo_${k}" value="${esc(o.geometry?.[k])}"></div>`).join("")}
+        </div>
+      </fieldset>
+      <div class="actions"><button class="btn pri" type="submit">Save build</button><a class="btn" href="${id?`#/orders/${id}`:'#/orders'}">Cancel</a></div>
+    </form>`, ()=>{
+      renderBom();
+      const titleInput=$('#oform [name="title"]');let lastTitle=o.title||"";
+      if(titleInput)titleInput.addEventListener("input",()=>{const fi=$('#bom [data-autofill="1"]');if(fi&&(fi.value===""||fi.value===lastTitle))fi.value=titleInput.value;lastTitle=titleInput.value;});
+      $("#oform").addEventListener("submit",async e=>{
+        e.preventDefault();
+        const f=fields(e.target);
+        const rec=id?await dbGet("orders",id):{id:uid(),createdAt:now(),stageLog:[],checklist:[]};
+        rec.geometry=rec.geometry||{};
+        for(const k in f){ if(k.startsWith("geo_"))rec.geometry[k.slice(4)]=f[k]; else rec[k]=f[k]; }
+        delete rec.quote;delete rec.deposit;
+        // collect bom from DOM
+        rec.bom=readBom();
+        rec.bom.forEach(b=>{if(b.category==="Frame"&&!b.item)b.item=f.title||"";});
+        // stage change log
+        const prevStage=id?(await dbGet("orders",id)).stage:null;
+        if(f.stage&&f.stage!==prevStage){rec.stageLog=rec.stageLog||[];rec.stageLog.push({ts:now(),stage:f.stage,note:id?"Stage updated":"Build created"});}
+        // fit snapshot on first save
+        if(!rec.fitSnapshot&&rec.customerId){const cust=await dbGet("customers",rec.customerId);if(cust&&cust.fit)rec.fitSnapshot=JSON.parse(JSON.stringify(cust.fit));}
+        rec.updatedAt=now();
+        await dbPut("orders",rec);
+        toast("Build saved"); go(`#/orders/${rec.id}`);
+      });
+    });
+}
+function syncBom(){const el=$("#bom");if(el&&el.dataset.ready){bomDraft=$$("#bom .rowline").map(r=>({id:r.dataset.id,category:$(".b-cat",r).value,item:$(".b-item",r).value,brand:$(".b-brand",r).value,price:$(".b-price",r).value,status:$(".b-status",r).value,_auto:$(".b-item",r).dataset.autofill==="1"}));}}
+function bomAdd(){syncBom();bomDraft.push({id:uid(),category:"",item:"",brand:"",price:"",status:"Planned"});renderBom();}
+function bomDel(i){syncBom();bomDraft.splice(i,1);renderBom();}
+function readBom(){
+  return $$("#bom .rowline").map(r=>({
+    id:r.dataset.id,
+    category:$(".b-cat",r).value.trim(),
+    item:$(".b-item",r).value.trim(),
+    brand:$(".b-brand",r).value.trim(),
+    price:$(".b-price",r).value.trim(),
+    status:$(".b-status",r).value
+  })).filter(x=>x.item||x.brand||x.category);
+}
+function renderBom(){
+  const el=$("#bom");if(!el)return;
+  el.dataset.ready="1";
+  const STAT=["Planned","Ordered","Received","Installed"];
+  el.innerHTML=bomDraft.length?bomDraft.map((b,i)=>`<div class="rowline" data-id="${b.id}">
+    <input class="b-cat" placeholder="Category" value="${esc(b.category)}" style="flex:0 0 120px">
+    <input class="b-item" placeholder="Item"${b._auto?' data-autofill="1"':''} value="${esc(b.item)}">
+    <input class="b-brand" placeholder="Brand/model" value="${esc(b.brand)}">
+    <input class="b-price" placeholder="$" value="${esc(b.price)}" style="flex:0 0 80px">
+    <select class="b-status" style="flex:0 0 110px">${STAT.map(s=>`<option ${s===b.status?"selected":""}>${s}</option>`).join("")}</select>
+    <button type="button" class="btn sm ghost" onclick="bomDel(${i})">✕</button>
+  </div>`).join(""):'<div class="muted" style="margin-bottom:8px">No components yet.</div>';
+}
+
+/* ---------- BikeCAD geometry import ---------- */
+function parseGeometry(text){
+  const out={};if(!text)return out;
+  const pats=[
+    ["stack",/\bstack\b/i],
+    ["reach",/\breach\b/i],
+    ["tt",/top\s*tube|effective\s*tt|\bett\b/i],
+    ["staAngle",/seat\s*(tube\s*)?angle/i],
+    ["htAngle",/head\s*(tube\s*)?angle/i],
+    ["st",/seat\s*tube(?!\s*angle)/i],
+    ["chainstay",/chain\s*stay/i],
+    ["wheelbase",/wheel\s*base/i],
+    ["standover",/stand\s*over/i],
+    ["bbDrop",/(bottom\s*bracket|\bbb)\s*drop/i],
+    ["forkRake",/fork\s*(rake|offset)|\brake\b/i],
+    ["trail",/\btrail\b/i]
+  ];
+  const num=/-?\d+(?:\.\d+)?/;
+  for(const raw of String(text).split(/\r?\n/)){
+    const line=raw.trim();if(!line)continue;
+    const m=line.match(num);if(!m)continue;
+    for(const [field,re] of pats){ if(out[field]!=null)continue; if(re.test(line)){out[field]=m[0];break;} }
+  }
+  return out;
+}
+function extractGeoToForm(){
+  const ta=document.getElementById("geoPaste");if(!ta)return;
+  const g=parseGeometry(ta.value);const keys=Object.keys(g);
+  if(!keys.length){toast("No geometry values recognized — check what you pasted");return;}
+  for(const k of keys){const inp=document.querySelector('[name="geo_'+k+'"]');if(inp)inp.value=g[k];}
+  toast("Filled "+keys.length+" geometry field"+(keys.length>1?"s":""));
+}
+function toggleGeoImport(){const el=document.getElementById("geoImport");if(el)el.style.display=(el.style.display==="none"||!el.style.display)?"block":"none";}
+async function importGeo(id){
+  const ta=document.getElementById("geoPasteDetail");if(!ta)return;
+  const g=parseGeometry(ta.value);const keys=Object.keys(g);
+  if(!keys.length){toast("No geometry values recognized — check what you pasted");return;}
+  const o=await dbGet("orders",id);o.geometry=Object.assign({},o.geometry||{},g);o.updatedAt=now();
+  await dbPut("orders",o);toast("Imported "+keys.length+" geometry value"+(keys.length>1?"s":""));router();
+}
+
+/* ---------- Orders: detail ---------- */
+async function viewOrderDetail(id){
+  const o=await dbGet("orders",id);
+  if(!o) return show(`<div class="empty">Build not found.</div>`);
+  const c=o.customerId?await dbGet("customers",o.customerId):null;
+  const assets=await dbByOrder(id);
+  const invoices=(await dbAll("invoices")).filter(i=>i.orderId===id).sort((a,b)=>(b.issueDate||b.createdAt||"").localeCompare(a.issueDate||a.createdAt||""));
+  const cad=assets.filter(a=>a.kind==="cad"), photos=assets.filter(a=>a.kind==="photo");
+  const idx=STAGES.indexOf(o.stage);
+  const nextStage=idx>=0&&idx<STAGES.length-1?STAGES[idx+1]:null;
+  const specRows=[["Material",o.frameMaterial],["Tubing",o.tubing],["Groupset",o.groupset],["Wheels",o.wheels],["Cockpit",o.cockpit],["Saddle",o.saddle],["Tires",o.tires],["Finish",o.finish]].filter(x=>x[1]);
+  const geoRows=GEO_FIELDS.filter(([k])=>o.geometry?.[k]).map(([k,l])=>`<dt>${l}</dt><dd>${esc(o.geometry[k])}</dd>`).join("");
+  const d=daysUntil(o.promisedDate);
+
+  show(`
+    <a class="backlink" href="#/orders">← Build Queue</a>
+    <div class="between"><div>
+      <h1>${esc(o.title||"Untitled")}</h1>
+      <p class="sub">${o.type?esc(o.type)+" · ":""}${c?`<a href="#/customers/${c.id}" style="color:var(--accent);font-weight:650">${esc(c.name)}</a>`:'<span class="muted">No customer</span>'}</p>
+    </div><div class="actions noprint">
+      <button class="btn" onclick="dlBuildPdf('${id}')">Download PDF</button>
+      <a class="btn pri" href="#/orders/${id}/status">Share status</a>
+      <a class="btn" href="#/orders/${id}/edit">Edit</a>
+      <button class="btn danger" onclick="delOrder('${id}')">Delete</button>
+    </div></div>
+
+    <div class="card noprint" style="margin-bottom:16px"><div class="bd" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px">Current stage: ${stageChip(o.stage)} ${o.blocker?`<span class="chip bad"><span class="dot"></span>${esc(o.blocker)}</span>`:""}</div>
+      ${nextStage?`<button class="btn pri sm" onclick="advance('${id}')">Advance to “${esc(nextStage)}” →</button>`:'<span class="muted">Final stage</span>'}
+    </div></div>
+
+    <div class="cols">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="hd">Spec</div><div class="bd">
+          ${specRows.length?`<dl class="kv">${specRows.map(([l,v])=>`<dt>${l}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`:'<div class="muted">No spec yet.</div>'}
+          ${o.specSummary?`<p style="margin:12px 0 0">${esc(o.specSummary)}</p>`:""}
+        </div></div>
+
+        <div class="card"><div class="hd">Bill of materials <span style="font-weight:800">${money(bomTotal(o))}</span></div><div class="bd tight">
+          ${(o.bom&&o.bom.length)?`<table><thead><tr><th>Category</th><th>Item</th><th>Brand</th><th>Status</th><th style="text-align:right">Price</th></tr></thead><tbody>
+            ${o.bom.map(b=>`<tr style="cursor:default"><td class="muted">${esc(b.category)}</td><td><b>${esc(b.item)}</b></td><td>${esc(b.brand)}</td><td><span class="chip ${b.status==="Installed"?"good":b.status==="Ordered"?"warn":""}">${esc(b.status||"")}</span></td><td style="text-align:right">${b.price?money(b.price):"—"}</td></tr>`).join("")}
+          </tbody><tfoot><tr><td colspan="4" style="text-align:right;font-weight:700;border-top:2px solid var(--line)">Total</td><td style="text-align:right;font-weight:800;border-top:2px solid var(--line)">${money(bomTotal(o))}</td></tr></tfoot></table>`:'<div class="empty">No components listed. Add a Frame line and components to price this build.</div>'}
+        </div></div>
+
+        <div class="card"><div class="hd">BikeCAD &amp; drawings <span class="noprint" style="display:flex;gap:6px"><button class="btn sm" onclick="toggleGeoImport()">Import geometry</button><label class="btn sm" style="cursor:pointer">＋ Upload<input type="file" hidden multiple accept=".bcad,.xml,image/*,application/pdf" onchange="upload('${id}','cad',this)"></label></span></div><div class="bd">
+          <div id="geoImport" class="noprint" style="display:none;margin-bottom:14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)">
+            <label style="display:block;margin-bottom:6px">Paste the BikeCAD geometry table</label>
+            <textarea id="geoPasteDetail" placeholder="One value per line, e.g.&#10;Stack   595&#10;Reach   382&#10;Head tube angle   71.5" style="min-height:80px"></textarea>
+            <div class="actions" style="margin-top:8px;align-items:center"><button class="btn sm pri" onclick="importGeo('${id}')">Extract geometry</button><span class="hint">Pulls stack, reach, angles, chainstay, etc. straight into this build.</span></div>
+          </div>
+          ${cad.length?cad.map(a=>a.type&&a.type.startsWith("image/")?`<figure style="margin:0 0 12px;border:1px solid var(--line);border-radius:10px;overflow:hidden"><img src="${assetUrl(a)}" style="width:100%;display:block"><figcaption style="padding:7px 10px;font-size:12px" class="muted">${esc(a.name)} <a class="noprint" style="float:right;color:var(--accent)" href="${assetUrl(a)}" download="${esc(a.name)}">download</a></figcaption></figure>`:`<div class="filechip"><span>📐 ${esc(a.name)}</span><span class="noprint"><a class="btn sm" href="${assetUrl(a)}" download="${esc(a.name)}">Download</a> <button class="btn sm ghost" onclick="delAsset('${a.id}','${id}')">✕</button></span></div>`).join(""):'<div class="muted">No BikeCAD files yet. Upload the .bcad and its exported drawing, then <b>Import geometry</b> to pull the numbers in.</div>'}
+        </div></div>
+
+        <div class="card"><div class="hd">Build photos <label class="btn sm noprint" style="cursor:pointer">＋ Add<input type="file" hidden multiple accept="image/*" onchange="upload('${id}','photo',this)"></label></div><div class="bd">
+          ${photos.length?`<div class="gallery">${photos.map(a=>`<figure><img src="${assetUrl(a)}"><figcaption><span class="muted">${fdate(a.createdAt)}</span><button class="btn sm ghost noprint" onclick="delAsset('${a.id}','${id}')">✕</button></figcaption></figure>`).join("")}</div>`:'<div class="muted">No photos yet — document each stage.</div>'}
+        </div></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="hd">Schedule</div><div class="bd"><dl class="kv">
+          <dt>Build total</dt><dd style="font-weight:800">${money(bomTotal(o))}</dd>
+          <dt>Promised</dt><dd style="${d!=null&&d<0&&!DONE_STAGES.includes(o.stage)?'color:var(--bad);font-weight:700':''}">${fdate(o.promisedDate)}${d!=null&&!DONE_STAGES.includes(o.stage)?` (${d<0?Math.abs(d)+'d late':d+'d'})`:''}</dd>
+        </dl></div></div>
+        <div class="card"><div class="hd">Invoices <span class="noprint" style="display:flex;gap:6px"><a class="btn sm" href="#/invoices/new?order=${id}">＋ New</a><a class="btn sm" href="#/invoices/new?order=${id}&frame=1">Frame only</a></span></div><div class="bd tight">
+          ${invoices.length?`<table><tbody>${invoices.map(i=>`<tr onclick="go('#/invoices/${i.id}')"><td><b>${esc(i.number||"—")}</b></td><td>${invStatusChip(i)}</td><td style="text-align:right">${money(invTotal(i))}</td><td style="text-align:right;${invBalance(i)>0&&i.status!=="Paid"?"color:var(--accent);font-weight:700":"color:var(--ink-2)"}">${money(Math.max(0,invBalance(i)))} due</td></tr>`).join("")}</tbody></table>`:'<div class="empty" style="padding:18px">No invoices yet.</div>'}
+        </div></div>
+
+        ${geoRows?`<div class="card"><div class="hd">Geometry</div><div class="bd"><dl class="kv">${geoRows}</dl></div></div>`:""}
+
+        ${o.fitSnapshot&&Object.values(o.fitSnapshot).some(Boolean)?`<div class="card"><div class="hd">Fit snapshot</div><div class="bd"><dl class="kv">${FIT_FIELDS.filter(([k])=>o.fitSnapshot[k]).map(([k,l])=>`<dt>${l}</dt><dd>${esc(o.fitSnapshot[k])}</dd>`).join("")}</dl></div></div>`:""}
+
+        <div class="card"><div class="hd">Checklist <button class="btn sm noprint" onclick="addCheck('${id}')">＋</button></div><div class="bd">
+          ${(o.checklist&&o.checklist.length)?o.checklist.map((it,i)=>`<div class="checkitem ${it.done?'done':''}"><input type="checkbox" ${it.done?"checked":""} onchange="toggleCheck('${id}',${i})"><label style="flex:1">${esc(it.text)}</label><button class="btn sm ghost noprint" onclick="delCheck('${id}',${i})">✕</button></div>`).join(""):'<div class="muted">No tasks.</div>'}
+        </div></div>
+
+        <div class="card"><div class="hd">Progress log</div><div class="bd">
+          ${(o.stageLog&&o.stageLog.length)?`<ul class="timeline">${[...o.stageLog].reverse().map(s=>`<li><span class="tdot"></span><div class="tx"><div><b>${esc(s.stage)}</b></div><div class="tt">${fdate(s.ts)}${s.note?" · "+esc(s.note):""}</div></div></li>`).join("")}</ul>`:'<div class="muted">No history yet.</div>'}
+        </div></div>
+      </div>
+    </div>`);
+}
+async function advance(id){
+  const o=await dbGet("orders",id);const i=STAGES.indexOf(o.stage);
+  if(i<0||i>=STAGES.length-1)return;
+  o.stage=STAGES[i+1];o.stageLog=o.stageLog||[];o.stageLog.push({ts:now(),stage:o.stage,note:"Advanced"});
+  if(DONE_STAGES.includes(o.stage))o.blocker="";
+  o.updatedAt=now();await dbPut("orders",o);toast("Moved to "+o.stage);router();
+}
+async function upload(id,kind,input){
+  const files=[...input.files];if(!files.length)return;
+  for(const f of files){await dbPut("assets",{id:uid(),orderId:id,kind,name:f.name,type:f.type,blob:f,createdAt:now()});}
+  toast(files.length+" file(s) added");router();
+}
+async function delAsset(aid,oid){if(!confirm("Remove this file?"))return;await dbDel("assets",aid);router();}
+async function addCheck(id){const t=prompt("Task:");if(!t)return;const o=await dbGet("orders",id);o.checklist=o.checklist||[];o.checklist.push({text:t.trim(),done:false});await dbPut("orders",o);router();}
+async function toggleCheck(id,i){const o=await dbGet("orders",id);o.checklist[i].done=!o.checklist[i].done;await dbPut("orders",o);router();}
+async function delCheck(id,i){const o=await dbGet("orders",id);o.checklist.splice(i,1);await dbPut("orders",o);router();}
+async function delOrder(id){if(!confirm("Delete this build and its files? This cannot be undone."))return;await dbDelOrderAssets(id);await dbDel("orders",id);toast("Build deleted");go("#/orders");}
+
+async function viewBuildStatus(id){
+  const o=await dbGet("orders",id);
+  if(!o) return show(`<div class="empty">Build not found.</div>`);
+  const [c,b,assets]=await Promise.all([o.customerId?dbGet("customers",o.customerId):null,getBuilder(),dbByOrder(id)]);
+  const photos=assets.filter(a=>a.kind==="photo");
+  const idx=Math.max(0,STAGES.indexOf(o.stage));
+  const pct=DONE_STAGES.includes(o.stage)?100:(STAGES.length>1?Math.round(idx/(STAGES.length-1)*100):0);
+  const specBits=[["Material",o.frameMaterial],["Tubing",o.tubing],["Groupset",o.groupset],["Wheels",o.wheels],["Finish",o.finish]].filter(x=>x[1]);
+  const msg=STATUS_MSG[o.stage]||"";
+  const contact=[b.email,b.phone,b.website].filter(Boolean).map(esc).join(" · ");
+  show(`
+    <a class="backlink noprint" href="#/orders/${id}">← Build</a>
+    <div class="between noprint" style="margin-bottom:14px"><div><h1 style="margin:0">Build status</h1><p class="sub" style="margin:2px 0 0">Customer-facing — print or Save as PDF to share.</p></div>
+      <div class="actions"><button class="btn pri" onclick="dlStatusPdf('${id}')">Download PDF</button></div></div>
+    <div class="statusdoc">
+      <div class="sd-head">
+        <div>${b.logo?`<img class="logo" src="${esc(b.logo)}">`:""}<div class="sd-shop">${esc(b.shopName||b.builderName||"Your shop")}</div>${b.email?`<div class="muted">${esc(b.email)}</div>`:""}${b.website?`<div class="muted">${esc(b.website)}</div>`:""}</div>
+        <div class="sd-meta"><div class="sd-title">BUILD STATUS</div><div class="muted">${fdate(now())}</div></div>
+      </div>
+      ${c?`<div class="sd-for">Prepared for <b>${esc(c.name)}</b></div>`:""}
+      <h2 style="margin:2px 0 0">${esc(o.title||"Your custom build")}</h2>
+      ${specBits.length?`<div class="sd-spec">${specBits.map(([l,v])=>`<span class="chip">${esc(l)}: ${esc(v)}</span>`).join("")}</div>`:'<div style="height:14px"></div>'}
+      <div class="sd-progress">
+        <div class="sd-current">Currently: <b>${esc(o.stage||"—")}</b> <span class="muted">· step ${idx+1} of ${STAGES.length}</span></div>
+        <div class="sd-bar"><div class="sd-fill" style="width:${pct}%"></div></div>
+        ${msg?`<div class="sd-msg">${esc(msg)}</div>`:""}
+        ${o.promisedDate&&!DONE_STAGES.includes(o.stage)?`<div class="sd-eta">Estimated delivery: <b>${fdate(o.promisedDate)}</b></div>`:""}
+      </div>
+      <ul class="sd-stages">
+        ${STAGES.map((s,i)=>{const cls=i<idx?"done":(i===idx?"cur":"up");const mk=i<idx?"✓":(i===idx?"●":String(i+1));return `<li class="${cls}"><span class="mk">${mk}</span>${esc(s)}</li>`;}).join("")}
+      </ul>
+      ${photos.length?`<div class="sd-photos">${photos.slice(-6).map(a=>`<img src="${assetUrl(a)}">`).join("")}</div>`:""}
+      <div class="sd-foot">Questions about your build? ${contact||"Contact your builder."}</div>
+    </div>`);
+}
+
+/* ---------- Settings ---------- */
+async function viewSettings(){
+  const [cs,os,as,invs]=await Promise.all([dbAll("customers"),dbAll("orders"),dbAll("assets"),dbAll("invoices")]);
+  const b=await getBuilder();
+  const theme=localStorage.getItem("bb-theme")||"auto";
+  show(`
+    <h1>Settings</h1><p class="sub">Backups, appearance, and sample data.</p>
+    <div class="cols">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="hd">Shop / builder <a class="btn sm" href="#/builder">Edit</a></div><div class="bd">
+          ${(b.shopName||b.builderName)?`${b.logo?`<img class="logo" src="${esc(b.logo)}">`:""}<div style="font-weight:750">${esc(b.shopName||b.builderName)}</div>${b.builderName&&b.shopName?`<div class="muted">${esc(b.builderName)}</div>`:""}${b.email?`<div class="muted">${esc(b.email)}</div>`:""}${b.phone?`<div class="muted">${esc(b.phone)}</div>`:""}`:'<div class="muted">Not set — add your shop name, contact, logo, and invoice defaults. Shows in the sidebar and on every invoice.</div>'}
+        </div></div>
+        <div class="card"><div class="hd">Backup &amp; restore</div><div class="bd">
+          <p class="muted" style="margin-top:0">Everything lives in this browser. Export a backup file regularly and keep it safe — that file <b>is</b> your data (customers, builds, BikeCAD files, and photos).</p>
+          <div class="actions">
+            <button class="btn pri" onclick="exportData()">⬇ Export backup (.json)</button>
+            <label class="btn" style="cursor:pointer">⬆ Import backup<input type="file" hidden accept="application/json" onchange="importData(this)"></label>
+          </div>
+          <p class="hint" style="margin-bottom:0">Currently storing: ${cs.length} customers · ${os.length} builds · ${invs.length} invoices · ${as.length} files.</p>
+        </div></div>
+        <div class="card"><div class="hd">Sample data</div><div class="bd">
+          <p class="muted" style="margin-top:0">Load a few example customers and builds to see how it works. Safe to clear afterward.</p>
+          <div class="actions"><button class="btn" onclick="seed()">Load sample data</button><button class="btn danger" onclick="wipe()">Erase everything</button></div>
+        </div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="hd">Appearance</div><div class="bd">
+          <div class="field"><label>Theme</label><select onchange="setTheme(this.value)">
+            ${["auto","light","dark"].map(t=>`<option value="${t}" ${t===theme?"selected":""}>${t[0].toUpperCase()+t.slice(1)}</option>`).join("")}
+          </select></div>
+        </div></div>
+      </div>
+    </div>`);
+}
+function setTheme(t){localStorage.setItem("bb-theme",t);applyTheme();}
+function applyTheme(){const t=localStorage.getItem("bb-theme")||"auto";if(t==="auto")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",t);}
+
+async function exportData(){
+  const [customers,orders,assets,invoices,settings]=await Promise.all([dbAll("customers"),dbAll("orders"),dbAll("assets"),dbAll("invoices"),dbAll("settings")]);
+  const encAssets=[];
+  for(const a of assets){const b64=await blobToB64(a.blob);encAssets.push({...a,blob:null,b64,mime:a.type});}
+  const dump={_app:"buildbook",_v:2,exportedAt:now(),customers,orders,invoices,settings,assets:encAssets};
+  const blob=new Blob([JSON.stringify(dump)],{type:"application/json"});
+  const bp=settings.find(s=>s.id==="builder")||{};
+  const slug=((bp.shopName||bp.builderName||"shop").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""))||"shop";
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=slug+"-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();
+  toast("Backup downloaded");
+}
+async function importData(input){
+  const file=input.files[0];if(!file)return;
+  if(!confirm("Importing will REPLACE all current data with the backup. Continue?"))return;
+  const text=await file.text();const dump=JSON.parse(text);
+  if(dump._app!=="buildbook")return alert("This isn't a valid backup file.");
+  for(const s of ["customers","orders","assets","invoices","settings"]){const store=tx(s,"readwrite");await pr(store.clear());}
+  for(const c of dump.customers||[])await dbPut("customers",c);
+  for(const o of dump.orders||[])await dbPut("orders",o);
+  for(const iv of dump.invoices||[])await dbPut("invoices",iv);
+  for(const st of dump.settings||[])await dbPut("settings",st);
+  for(const a of dump.assets||[]){const blob=a.b64?b64ToBlob(a.b64,a.mime):null;await dbPut("assets",{id:a.id,orderId:a.orderId,kind:a.kind,name:a.name,type:a.mime||a.type,createdAt:a.createdAt,blob});}
+  renderShopInfo(await getBuilder());
+  toast("Backup imported");go("#/");
+}
+function blobToB64(blob){return new Promise(res=>{if(!(blob instanceof Blob))return res(null);const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=()=>res(null);try{r.readAsDataURL(blob);}catch(_){res(null);}});}
+function b64ToBlob(b64,mime){const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new Blob([arr],{type:mime||"application/octet-stream"});}
+
+async function wipe(){if(!confirm("Erase ALL customers, builds, invoices, and files? (Your shop profile is kept.) This cannot be undone."))return;for(const s of ["customers","orders","assets","invoices"]){await pr(tx(s,"readwrite").clear());}toast("Erased");go("#/");}
+async function seed(){
+  const c1={id:uid(),createdAt:now(),name:"Dana Ellsworth",pronouns:"she/her",phone:"555-0142",email:"dana.e@example.com",preferredContact:"Email",referralSource:"Referral (M. Ruiz)",instagram:"@dana.rides",strava:"https://www.strava.com/athletes/1234567",discipline:"All-road",experience:"Advanced",currentBikes:"2018 alloy CX bike, too twitchy",goals:"Comfortable century pace, light bikepacking",painPoints:"Left knee tracks in; wants slightly taller stack",material:"Titanium",rideCharacter:"Endurance, lively",brakes:"Disc",tireClearance:"700x45",budget:"$6,500",timeline:"Spring",mounts:"Fenders + 3 bottles + top-tube bag",wants:"Muted green fade, polished Ti head badge",fit:{height:"172 cm",inseam:"79 cm",torso:"61 cm",armLength:"58 cm",shoulderWidth:"40 cm",sitBoneWidth:"120 mm",flexibility:"Moderate",saddleHeight:"71.5 cm",barDrop:"4 cm"},notes:[{ts:now(),text:"Fit session booked. Bring the 42 and 45 tire samples to check clearance."}]};
+  const c2={id:uid(),createdAt:now(),name:"Marcus Tran",pronouns:"he/him",phone:"555-0199",email:"mtran@example.com",preferredContact:"Text",referralSource:"Instagram",instagram:"@marcustran.gravel",discipline:"Gravel",experience:"Racer",currentBikes:"Race gravel, wants stiffer",goals:"Podium at regional gravel series",painPoints:"None — aggressive fit ok",material:"Steel",rideCharacter:"Racy, stiff",brakes:"Disc",tireClearance:"700x40",budget:"$4,800",timeline:"8 weeks",mounts:"2 bottles",wants:"Raw clear w/ orange decals",fit:{height:"181 cm",inseam:"85 cm",saddleHeight:"76 cm",barDrop:"9 cm"},notes:[]};
+  await dbPut("customers",c1);await dbPut("customers",c2);
+  const o1={id:uid(),createdAt:now(),customerId:c1.id,title:"All-road Ti disc",type:"Custom frame",stage:"Mitering",blocker:"Waiting on 44mm head tube",promisedDate:new Date(Date.now()+40*864e5).toISOString().slice(0,10),frameMaterial:"Titanium",tubing:"3/2.5 Ti, custom butted DT",groupset:"SRAM Rival AXS",wheels:"Custom 650b/700c option",tires:"Rene Herse 44",finish:"Bead-blast + green fade panels",specSummary:"Endurance all-road, tall-ish stack, fender + light bikepacking mounts.",bom:[{id:uid(),category:"Frame",item:"Ti tubeset",brand:"3/2.5 custom",price:"1200",status:"Received"},{id:uid(),category:"Group",item:"Rival AXS 2x",brand:"SRAM",price:"1450",status:"Ordered"},{id:uid(),category:"Wheels",item:"All-road disc",brand:"Custom build",price:"950",status:"Planned"}],geometry:{stack:"595",reach:"382",tt:"555",htAngle:"71.5",staAngle:"73.5",chainstay:"425",wheelbase:"1032",bbDrop:"72",forkRake:"50",trail:"64"},quote:"6500",deposit:"2000",stageLog:[{ts:now(),stage:"Design",note:"Geometry locked in BikeCAD"},{ts:now(),stage:"Fabrication",note:"Mitering started"}],checklist:[{text:"Face + chase BB",done:true},{text:"Braze head badge",done:false},{text:"Ream + face head tube",done:false}],fitSnapshot:JSON.parse(JSON.stringify(c1.fit))};
+  const o2={id:uid(),createdAt:now(),customerId:c2.id,title:"Race gravel — steel",type:"Custom frame",stage:"Design",promisedDate:new Date(Date.now()+70*864e5).toISOString().slice(0,10),frameMaterial:"Steel",tubing:"Columbus Spirit",groupset:"Force AXS 1x",finish:"Raw clear + orange",specSummary:"Stiff, aggressive gravel race bike.",bom:[{id:uid(),category:"Frame",item:"Columbus Spirit tubeset",brand:"Columbus",price:"420",status:"Planned"}],geometry:{stack:"560",reach:"400",htAngle:"72",staAngle:"73"},quote:"4800",deposit:"0",stageLog:[{ts:now(),stage:"Quote",note:"Quote sent"}],checklist:[],fitSnapshot:JSON.parse(JSON.stringify(c2.fit))};
+  const o3={id:uid(),createdAt:now(),customerId:c1.id,title:"Headset service",type:"Repair / service",stage:"Ready",promisedDate:new Date(Date.now()-2*864e5).toISOString().slice(0,10),specSummary:"Creaky headset on current bike while she waits for the build.",bom:[],quote:"85",deposit:"0",stageLog:[{ts:now(),stage:"Ready",note:"Done, ready for pickup"}],checklist:[{text:"Repack bearings",done:true}]};
+  await dbPut("orders",o1);await dbPut("orders",o2);await dbPut("orders",o3);
+  const existB=await getBuilder();
+  if(!existB.shopName&&!existB.builderName){await saveBuilder({id:"builder",shopName:"Ridgeline Cycles",builderName:"Sam Ridge",email:"sam@ridgelinecycles.example",phone:"555-0100",website:"ridgelinecycles.example",address:"14 Forge Lane\nPortland, OR 97201",taxId:"",invoicePrefix:"INV-",nextInvoiceNumber:1002,paymentTerms:"50% deposit reserves your build slot; balance due before delivery. Checks payable to Ridgeline Cycles."});}
+  const inv1={id:uid(),createdAt:now(),number:"INV-1001",customerId:c1.id,orderId:o1.id,issueDate:new Date().toISOString().slice(0,10),dueDate:new Date(Date.now()+14*864e5).toISOString().slice(0,10),status:"Sent",items:[{id:uid(),description:"All-road Ti disc — custom titanium frameset",qty:1,unitPrice:6500}],taxRate:"",payments:[{id:uid(),date:new Date(Date.now()-10*864e5).toISOString().slice(0,10),amount:2000,note:"Deposit"}],notes:"Deposit received — thank you. Balance due before delivery."};
+  await dbPut("invoices",inv1);
+  toast("Sample data loaded");go("#/");
+}
+
+/* ---------- Builder / shop profile ---------- */
+async function getBuilder(){return (await dbGet("settings","builder"))||{id:"builder"};}
+async function saveBuilder(b){b.id="builder";await dbPut("settings",b);renderShopInfo(b);}
+function renderShopInfo(b){
+  const nm=(b&&(b.shopName||b.builderName))||"";
+  document.title=nm||"Custom Bike Shop";
+  document.querySelectorAll(".brandname").forEach(el=>{el.textContent=nm||"Your shop";});
+  const el=document.getElementById("shopinfo");if(!el)return;
+  if(!nm){el.innerHTML=`<a href="#/builder" class="shopsub" style="color:var(--accent)">＋ Add your shop info</a>`;el.style.borderBottom="";return;}
+  const sub=[];
+  if(b.shopName&&b.builderName)sub.push(esc(b.builderName));
+  if(b.email)sub.push(esc(b.email));
+  el.innerHTML=sub.map(s=>`<div class="shopsub">${s}</div>`).join("");
+  el.style.borderBottom=sub.length?"":"none";
+}
+
+async function viewBuilderForm(){
+  markNav("settings");
+  const b=await getBuilder();
+  show(`
+    <a class="backlink" href="#/settings">← Settings</a>
+    <div class="between"><h1>Shop / builder profile</h1><button type="submit" form="bform" class="btn pri">Save shop info</button></div>
+    <p class="sub">Shown in the sidebar and used as the “from” on every invoice.</p>
+    <form id="bform" class="form" style="max-width:760px">
+      <fieldset><legend>Business</legend><div class="fgrid">
+        <div class="field"><label>Shop / business name</label><input name="shopName" value="${esc(b.shopName)}"></div>
+        <div class="field"><label>Builder name</label><input name="builderName" value="${esc(b.builderName)}"></div>
+        <div class="field"><label>Email</label><input name="email" value="${esc(b.email)}"></div>
+        <div class="field"><label>Phone</label><input name="phone" value="${esc(b.phone)}"></div>
+        <div class="field"><label>Website</label><input name="website" value="${esc(b.website)}"></div>
+        <div class="field"><label>Tax / VAT ID</label><input name="taxId" value="${esc(b.taxId)}"></div>
+        <div class="field wide"><label>Address</label><textarea name="address" placeholder="Street, city, region, postal code">${esc(b.address)}</textarea></div>
+      </div></fieldset>
+      <fieldset><legend>Logo</legend>
+        <div id="logoPrev">${b.logo?`<img class="logo" src="${esc(b.logo)}">`:'<span class="muted">No logo yet.</span>'}</div>
+        <div class="actions" style="margin-top:10px"><label class="btn sm" style="cursor:pointer">Choose image…<input type="file" hidden accept="image/*" id="logoInput"></label><button type="button" class="btn sm ghost" id="logoClear">Remove</button></div>
+        <p class="hint">Appears in the sidebar summary and at the top of invoices.</p>
+      </fieldset>
+      <fieldset><legend>Invoicing defaults</legend><div class="fgrid">
+        <div class="field"><label>Invoice number prefix</label><input name="invoicePrefix" value="${esc(b.invoicePrefix||"INV-")}"></div>
+        <div class="field"><label>Next invoice number</label><input name="nextInvoiceNumber" type="number" value="${esc(b.nextInvoiceNumber||1001)}"></div>
+        <div class="field"><label>Default deposit %</label><input name="depositPct" type="number" min="0" max="100" value="${esc(b.depositPct!=null?b.depositPct:50)}"></div>
+        <div class="field wide"><label>Default terms / payment notes</label><textarea name="paymentTerms" placeholder="e.g. 50% deposit to start, balance due on delivery. Checks payable to…">${esc(b.paymentTerms)}</textarea></div>
+      </div></fieldset>
+      <div class="actions"><button class="btn pri" type="submit">Save shop info</button><a class="btn" href="#/settings">Cancel</a></div>
+    </form>`, ()=>{
+      let logoData=b.logo||"";
+      const input=document.getElementById("logoInput");
+      if(input)input.addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{logoData=r.result;document.getElementById("logoPrev").innerHTML=`<img class="logo" src="${logoData}">`;};r.readAsDataURL(f);});
+      const clr=document.getElementById("logoClear");
+      if(clr)clr.addEventListener("click",()=>{logoData="";document.getElementById("logoPrev").innerHTML='<span class="muted">No logo yet.</span>';});
+      document.getElementById("bform").addEventListener("submit",async e=>{
+        e.preventDefault();
+        const f=fields(e.target);f.id="builder";f.logo=logoData;f.nextInvoiceNumber=Number(f.nextInvoiceNumber||1001);f.depositPct=Number(f.depositPct||50);
+        await saveBuilder(f);toast("Shop info saved");go("#/settings");
+      });
+    });
+}
+
+/* ---------- Invoices ---------- */
+function invSubtotal(inv){return (inv.items||[]).reduce((s,i)=>s+Number(i.qty||0)*Number(i.unitPrice||0),0);}
+function invDiscount(inv){const sub=invSubtotal(inv),v=Number(inv.discountValue||0);if(!v)return 0;const amt=(inv.discountType==="%")?sub*v/100:v;return Math.max(0,Math.min(sub,amt));}
+function invTax(inv){return (invSubtotal(inv)-invDiscount(inv))*Number(inv.taxRate||0)/100;}
+function invTotal(inv){return invSubtotal(inv)-invDiscount(inv)+invTax(inv);}
+function invPaymentList(inv){
+  if(Array.isArray(inv.payments))return inv.payments;
+  const out=[]; // legacy invoices stored single deposit/payment amounts
+  if(Number(inv.depositApplied||0))out.push({amount:inv.depositApplied,note:"Deposit",date:inv.depositDate||""});
+  if(Number(inv.amountPaid||0))out.push({amount:inv.amountPaid,note:"Payment",date:""});
+  return out;
+}
+function invPaid(inv){return invPaymentList(inv).reduce((s,p)=>s+Number(p.amount||0),0);}
+function invBalance(inv){return invTotal(inv)-invPaid(inv);}
+function invStatusChip(i){const st=i.status||"Draft";const cls=st==="Paid"?"good":(st==="Sent"?"warn":"stage");return `<span class="chip ${cls}"><span class="dot"></span>${esc(st)}</span>`;}
+
+async function viewInvoices(){
+  const [invs,customers]=await Promise.all([dbAll("invoices"),dbAll("customers")]);
+  invs.sort((a,b)=>(b.issueDate||b.createdAt||"").localeCompare(a.issueDate||a.createdAt||""));
+  const cmap=Object.fromEntries(customers.map(c=>[c.id,c]));
+  const outstanding=invs.filter(i=>i.status!=="Paid").reduce((s,i)=>s+Math.max(0,invBalance(i)),0);
+  const collected=invs.filter(i=>i.status==="Paid").reduce((s,i)=>s+invTotal(i),0);
+  show(`
+    <div class="between"><div><h1>Invoices</h1><p class="sub">Create, print, and track what you're owed.</p></div>
+      <a class="btn pri" href="#/invoices/new">＋ New invoice</a></div>
+    <div class="grid stats" style="margin-bottom:18px">
+      <div class="tile"><div class="k">Outstanding</div><div class="v" style="${outstanding?'color:var(--accent)':''}">${money(outstanding)}</div></div>
+      <div class="tile"><div class="k">Collected</div><div class="v">${money(collected)}</div></div>
+      <div class="tile"><div class="k">Invoices</div><div class="v">${invs.length}</div></div>
+    </div>
+    <div class="card"><div class="bd tight">
+    ${invs.length?`<table><thead><tr><th>#</th><th>Customer</th><th>Issued</th><th>Status</th><th style="text-align:right">Total</th><th style="text-align:right">Balance</th></tr></thead><tbody>
+      ${invs.map(i=>`<tr onclick="go('#/invoices/${i.id}')"><td><b>${esc(i.number||"—")}</b></td><td>${esc(cmap[i.customerId]?.name||"—")}</td><td class="muted">${fdate(i.issueDate)}</td><td>${invStatusChip(i)}</td><td style="text-align:right">${money(invTotal(i))}</td><td style="text-align:right;${invBalance(i)>0&&i.status!=='Paid'?'color:var(--accent);font-weight:700':'color:var(--ink-2)'}">${money(Math.max(0,invBalance(i)))}</td></tr>`).join("")}
+    </tbody></table>`:`<div class="empty">No invoices yet. <a class="btn sm pri" href="#/invoices/new" style="margin-left:8px">Create one</a></div>`}
+    </div></div>`);
+}
+
+let invItems=[];
+let payDraft=[];
+function syncPay(){const el=$("#ipays");if(el&&el.dataset.ready){payDraft=$$("#ipays .payrow").map(r=>({id:r.dataset.id,date:$(".p-date",r).value,amount:$(".p-amt",r).value,note:$(".p-note",r).value}));}}
+function payAdd(){syncPay();payDraft.push({id:uid(),date:new Date().toISOString().slice(0,10),amount:"",note:""});renderPay();}
+function payDel(i){syncPay();payDraft.splice(i,1);renderPay();}
+function readPay(){return $$("#ipays .payrow").map(r=>({id:r.dataset.id,date:$(".p-date",r).value,amount:$(".p-amt",r).value.trim(),note:$(".p-note",r).value.trim()})).filter(x=>x.amount!=="");}
+function renderPay(){const el=$("#ipays");if(!el)return;el.dataset.ready="1";el.innerHTML=payDraft.length?payDraft.map((p,i)=>`<div class="payrow rowline" data-id="${p.id}"><input class="p-note" placeholder="Note (e.g. Deposit)" value="${esc(p.note)}"><input class="p-date" type="date" value="${esc(p.date)}" style="flex:0 0 150px"><input class="p-amt" type="number" step="1" placeholder="Amount" value="${esc(p.amount)}" style="flex:0 0 120px"><button type="button" class="btn sm ghost" onclick="payDel(${i})">✕</button></div>`).join(""):'<div class="muted" style="margin-bottom:8px">No payments yet — add the deposit with its date.</div>';}
+function buildInvoiceItemsFromOrder(o,frameOnly){
+  let bom=Array.isArray(o.bom)?o.bom.filter(b=>b&&(b.item||b.brand||b.category)):[];
+  if(frameOnly)bom=bom.filter(b=>(b.category||"").toLowerCase()==="frame");
+  if(!bom.length)return [{id:uid(),description:(o.title||"Custom build")+(o.frameMaterial?` — ${o.frameMaterial} frameset`:(frameOnly?" — frameset":"")),qty:1,unitPrice:""}];
+  return bom.map(b=>{const name=b.item||b.brand||"Component";return {id:uid(),description:(b.category?b.category+" — ":"")+name+(b.brand&&b.item?` (${b.brand})`:""),qty:1,unitPrice:b.price||""};});
+}
+async function viewInvoiceForm(id,query){
+  const inv=id?await dbGet("invoices",id):{};
+  const customers=(await dbAll("customers")).sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+  const orders=(await dbAll("orders")).sort((a,b)=>(a.title||"").localeCompare(b.title||""));
+  const b=await getBuilder();
+  let preCust=query&&query.customer, preOrder=query&&query.order, linked=null;
+  const frameOnly=query&&(query.frame==="1"||query.frame==="true");
+  if(preOrder){linked=await dbGet("orders",preOrder);if(linked)preCust=linked.customerId;}
+  if(inv.items&&inv.items.length)invItems=JSON.parse(JSON.stringify(inv.items));
+  else if(linked)invItems=buildInvoiceItemsFromOrder(linked,frameOnly);
+  else invItems=[{id:uid(),description:"",qty:1,unitPrice:""}];
+  const today=new Date().toISOString().slice(0,10);
+  if(Array.isArray(inv.payments))payDraft=JSON.parse(JSON.stringify(inv.payments));
+  else{
+    payDraft=invPaymentList(inv).map(p=>({id:uid(),date:p.date||"",amount:p.amount,note:p.note||""}));
+  }
+  const notesDefault=inv.notes!=null?inv.notes:(b.paymentTerms||"");
+  const orderOptions=(custId,selId)=>`<option value="">${custId?"— none —":"— select a customer first —"}</option>`+orders.filter(o=>o.customerId===custId).map(o=>`<option value="${o.id}" ${selId===o.id?"selected":""}>${esc(o.title||"Untitled")}</option>`).join("");
+  show(`
+    <a class="backlink" href="${id?`#/invoices/${id}`:'#/invoices'}">← Back</a>
+    <div class="between"><h1>${id?"Edit":"New"} invoice</h1><button type="submit" form="ivform" class="btn pri">Save invoice</button></div>
+    <form id="ivform" class="form">
+      <fieldset><legend>Details</legend><div class="fgrid">
+        <div class="field"><label>Customer</label><select name="customerId" required><option value="">— select —</option>${customers.map(c=>`<option value="${c.id}" ${(inv.customerId||preCust)===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
+        <div class="field"><label>Linked build (optional)</label><select name="orderId" id="ivOrder">${orderOptions(inv.customerId||preCust,inv.orderId||preOrder)}</select></div>
+        <div class="field"><label>Issue date</label><input type="date" name="issueDate" value="${esc(inv.issueDate?inv.issueDate.slice(0,10):today)}"></div>
+        <div class="field"><label>Due date</label><input type="date" name="dueDate" value="${esc(inv.dueDate?inv.dueDate.slice(0,10):"")}"></div>
+        <div class="field"><label>Status</label><select name="status">${["Draft","Sent","Paid"].map(s=>`<option ${((inv.status||"Draft")===s)?"selected":""}>${s}</option>`).join("")}</select></div>
+      </div></fieldset>
+      <fieldset><legend>Line items</legend>
+        <div id="iitems"></div>
+        <button type="button" class="btn sm" onclick="invAdd()">＋ Add line</button>
+      </fieldset>
+      <fieldset><legend>Payments &amp; deposit</legend>
+        <div id="ipays"></div>
+        <button type="button" class="btn sm" onclick="payAdd()">＋ Add payment</button>
+        <p class="hint" style="margin-bottom:0">Record the initial deposit and each later payment with its own date. Balance due updates automatically.</p>
+      </fieldset>
+      <fieldset><legend>Totals &amp; terms</legend><div class="fgrid">
+        <div class="field"><label>Discount</label><input name="discountValue" type="number" step="0.01" value="${esc(inv.discountValue)}" placeholder="0"></div>
+        <div class="field"><label>Discount type</label><select name="discountType">${[["$","$ off"],["%","% off"]].map(([v,l])=>`<option value="${v}" ${(inv.discountType||"$")===v?"selected":""}>${l}</option>`).join("")}</select></div>
+        <div class="field"><label>Tax rate (%)</label><input name="taxRate" type="number" step="0.01" value="${esc(inv.taxRate)}"></div>
+        <div class="field wide"><label>Notes / payment terms</label><textarea name="notes">${esc(notesDefault)}</textarea></div>
+      </div></fieldset>
+      <div class="actions"><button class="btn pri" type="submit">Save invoice</button><a class="btn" href="${id?`#/invoices/${id}`:'#/invoices'}">Cancel</a></div>
+    </form>`, ()=>{
+      renderInvItems();renderPay();
+      const custSel=document.querySelector('#ivform [name="customerId"]'),ordSel=document.getElementById("ivOrder");
+      if(custSel&&ordSel)custSel.addEventListener("change",()=>{ordSel.innerHTML=orderOptions(custSel.value,"");});
+      document.getElementById("ivform").addEventListener("submit",async e=>{
+        e.preventDefault();
+        const f=fields(e.target);
+        const rec=id?await dbGet("invoices",id):{id:uid(),createdAt:now()};
+        Object.assign(rec,f);
+        rec.items=readInvItems();
+        rec.payments=readPay();delete rec.depositApplied;delete rec.amountPaid;
+        if(!rec.number){const bp=await getBuilder();const prefix=bp.invoicePrefix||"INV-";const n=Number(bp.nextInvoiceNumber||1001);rec.number=prefix+n;bp.nextInvoiceNumber=n+1;await saveBuilder(bp);}
+        rec.updatedAt=now();
+        await dbPut("invoices",rec);toast("Invoice saved");go(`#/invoices/${rec.id}`);
+      });
+    });
+}
+function syncInvItems(){const el=$("#iitems");if(el&&el.dataset.ready){invItems=$$("#iitems .rowline").map(r=>({id:r.dataset.id,description:$(".i-desc",r).value,qty:$(".i-qty",r).value,unitPrice:$(".i-price",r).value}));}}
+function invAdd(){syncInvItems();invItems.push({id:uid(),description:"",qty:1,unitPrice:""});renderInvItems();}
+function invDel(i){syncInvItems();invItems.splice(i,1);renderInvItems();}
+function readInvItems(){return $$("#iitems .rowline").map(r=>({id:r.dataset.id,description:$(".i-desc",r).value.trim(),qty:$(".i-qty",r).value.trim(),unitPrice:$(".i-price",r).value.trim()})).filter(x=>x.description||x.unitPrice);}
+function renderInvItems(){
+  const el=$("#iitems");if(!el)return;
+  el.dataset.ready="1";
+  el.innerHTML=invItems.length?invItems.map((it,i)=>`<div class="rowline" data-id="${it.id}">
+    <input class="i-desc" placeholder="Description" value="${esc(it.description)}">
+    <input class="i-qty" placeholder="Qty" value="${esc(it.qty)}" style="flex:0 0 70px">
+    <input class="i-price" placeholder="Unit $" value="${esc(it.unitPrice)}" style="flex:0 0 100px">
+    <button type="button" class="btn sm ghost" onclick="invDel(${i})">✕</button>
+  </div>`).join(""):'<div class="muted" style="margin-bottom:8px">No line items yet.</div>';
+}
+
+async function viewInvoiceDetail(id){
+  const inv=await dbGet("invoices",id);
+  if(!inv) return show(`<div class="empty">Invoice not found.</div>`);
+  const c=inv.customerId?await dbGet("customers",inv.customerId):null;
+  const b=await getBuilder();
+  const sub=invSubtotal(inv),tax=invTax(inv),tot=invTotal(inv),bal=invBalance(inv);
+  show(`
+    <a class="backlink noprint" href="#/invoices">← Invoices</a>
+    <div class="between noprint" style="margin-bottom:14px"><div><h1 style="margin:0">${esc(inv.number||"Invoice")}</h1><p class="sub" style="margin:2px 0 0">${esc(c?.name||"")}</p></div>
+      <div class="actions">
+        <button class="btn pri" onclick="dlInvoicePdf('${id}')">Download PDF</button>
+        <a class="btn" href="#/invoices/${id}/deposit">Deposit invoice</a>
+        ${inv.status!=="Paid"?`<button class="btn pri" onclick="markPaid('${id}')">Mark paid</button>`:""}
+        <a class="btn" href="#/invoices/${id}/edit">Edit</a>
+        <button class="btn danger" onclick="delInvoice('${id}')">Delete</button>
+      </div></div>
+    <div class="invoice">
+      <div class="ihead">
+        <div>${b.logo?`<img class="logo" src="${esc(b.logo)}">`:""}<div class="ititle">INVOICE</div><div class="muted">${esc(inv.number||"")}</div></div>
+        <div style="text-align:right">
+          <div style="font-weight:750">${esc(b.shopName||b.builderName||"Your shop")}</div>
+          ${b.shopName&&b.builderName?`<div class="muted">${esc(b.builderName)}</div>`:""}
+          ${b.address?`<div class="muted" style="white-space:pre-line">${esc(b.address)}</div>`:""}
+          ${b.email?`<div class="muted">${esc(b.email)}</div>`:""}
+          ${b.phone?`<div class="muted">${esc(b.phone)}</div>`:""}
+          ${b.website?`<div class="muted">${esc(b.website)}</div>`:""}
+          ${b.taxId?`<div class="muted">Tax ID: ${esc(b.taxId)}</div>`:""}
+        </div>
+      </div>
+      <div class="parties">
+        <div class="party"><div class="lbl">Bill to</div>
+          <div style="font-weight:700">${esc(c?.name||"—")}</div>
+          ${c?.address?`<div class="muted">${esc(c.address)}</div>`:""}
+          ${c?.email?`<div class="muted">${esc(c.email)}</div>`:""}
+          ${c?.phone?`<div class="muted">${esc(c.phone)}</div>`:""}
+        </div>
+        <div class="party" style="text-align:right"><div class="lbl">Details</div>
+          <div>Issued: ${fdate(inv.issueDate)}</div>
+          ${inv.dueDate?`<div>Due: ${fdate(inv.dueDate)}</div>`:""}
+          <div style="margin-top:6px">${invStatusChip(inv)}</div>
+        </div>
+      </div>
+      <table><thead><tr><th>Description</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+        ${(inv.items||[]).length?inv.items.map(it=>`<tr style="cursor:default"><td>${esc(it.description)}</td><td style="text-align:right">${esc(it.qty||1)}</td><td style="text-align:right">${money(it.unitPrice)}</td><td style="text-align:right">${money(Number(it.qty||0)*Number(it.unitPrice||0))}</td></tr>`).join(""):'<tr><td colspan="4" class="muted">No line items.</td></tr>'}
+      </tbody></table>
+      <div class="itotals">
+        <div class="r"><span class="muted">Subtotal</span><span>${money(sub)}</span></div>
+        ${invDiscount(inv)?`<div class="r"><span class="muted">Discount${inv.discountType==="%"?" ("+esc(inv.discountValue)+"%)":""}</span><span>−${money(invDiscount(inv))}</span></div>`:""}
+        ${Number(inv.taxRate||0)?`<div class="r"><span class="muted">Tax (${esc(inv.taxRate)}%)</span><span>${money(tax)}</span></div>`:""}
+        <div class="r grand"><span>Total</span><span>${money(tot)}</span></div>
+        ${invPaymentList(inv).filter(p=>Number(p.amount||0)).map(p=>`<div class="r"><span class="muted">${esc(p.note||"Payment")}${p.date?" · "+fdate(p.date):""}</span><span>−${money(p.amount)}</span></div>`).join("")}
+        <div class="r due"><span><b>Balance due</b></span><span><b>${money(Math.max(0,bal))}</b></span></div>
+      </div>
+      ${inv.notes?`<div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--line)"><div class="lbl" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-2);font-weight:700;margin-bottom:5px">Notes</div><div style="white-space:pre-line">${esc(inv.notes)}</div></div>`:""}
+    </div>`);
+}
+async function markPaid(id){const inv=await dbGet("invoices",id);inv.status="Paid";inv.updatedAt=now();await dbPut("invoices",inv);toast("Marked paid");router();}
+async function delInvoice(id){if(!confirm("Delete this invoice? This cannot be undone."))return;await dbDel("invoices",id);toast("Invoice deleted");go("#/invoices");}
+async function saveDepPct(id){const v=Math.max(0,Math.min(100,Number(document.getElementById("depPct").value||0)));const inv=await dbGet("invoices",id);inv.depositPct=v;inv.updatedAt=now();await dbPut("invoices",inv);toast("Deposit set to "+v+"%");router();}
+async function viewInvoiceDeposit(id){
+  const inv=await dbGet("invoices",id);
+  if(!inv) return show(`<div class="empty">Invoice not found.</div>`);
+  const c=inv.customerId?await dbGet("customers",inv.customerId):null;
+  const b=await getBuilder();
+  const pct=Number(inv.depositPct!=null?inv.depositPct:(b.depositPct!=null?b.depositPct:50));
+  const sub=invSubtotal(inv),tax=invTax(inv),tot=invTotal(inv),paid=invPaid(inv);
+  const depositAmt=Math.round(tot*pct/100);
+  const depositDue=Math.max(0,depositAmt-paid);
+  const remaining=Math.max(0,tot-depositAmt);
+  show(`
+    <a class="backlink noprint" href="#/invoices/${id}">← Invoice</a>
+    <div class="between noprint" style="margin-bottom:14px"><div><h1 style="margin:0">Deposit invoice</h1><p class="sub" style="margin:2px 0 0">${esc(inv.number||"")}${c?" · "+esc(c.name):""}</p></div>
+      <div class="actions" style="align-items:center">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:650">Deposit % <input id="depPct" type="number" min="0" max="100" value="${pct}" style="width:78px"></label>
+        <button class="btn" onclick="saveDepPct('${id}')">Apply</button>
+        <button class="btn pri" onclick="dlDepositPdf('${id}')">Download PDF</button>
+      </div></div>
+    <div class="invoice">
+      <div class="ihead">
+        <div>${b.logo?`<img class="logo" src="${esc(b.logo)}">`:""}<div class="ititle">DEPOSIT INVOICE</div><div class="muted">${esc(inv.number||"")}</div></div>
+        <div style="text-align:right">
+          <div style="font-weight:750">${esc(b.shopName||b.builderName||"Your shop")}</div>
+          ${b.shopName&&b.builderName?`<div class="muted">${esc(b.builderName)}</div>`:""}
+          ${b.address?`<div class="muted" style="white-space:pre-line">${esc(b.address)}</div>`:""}
+          ${b.email?`<div class="muted">${esc(b.email)}</div>`:""}
+          ${b.phone?`<div class="muted">${esc(b.phone)}</div>`:""}
+          ${b.website?`<div class="muted">${esc(b.website)}</div>`:""}
+          ${b.taxId?`<div class="muted">Tax ID: ${esc(b.taxId)}</div>`:""}
+        </div>
+      </div>
+      <div class="parties">
+        <div class="party"><div class="lbl">Bill to</div>
+          <div style="font-weight:700">${esc(c?.name||"—")}</div>
+          ${c?.address?`<div class="muted">${esc(c.address)}</div>`:""}
+          ${c?.email?`<div class="muted">${esc(c.email)}</div>`:""}
+          ${c?.phone?`<div class="muted">${esc(c.phone)}</div>`:""}
+        </div>
+        <div class="party" style="text-align:right"><div class="lbl">Details</div>
+          <div>Issued: ${fdate(inv.issueDate)}</div>
+          ${inv.dueDate?`<div>Due: ${fdate(inv.dueDate)}</div>`:""}
+        </div>
+      </div>
+      <table><thead><tr><th>Description</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+        ${(inv.items||[]).length?inv.items.map(it=>`<tr style="cursor:default"><td>${esc(it.description)}</td><td style="text-align:right">${esc(it.qty||1)}</td><td style="text-align:right">${money(it.unitPrice)}</td><td style="text-align:right">${money(Number(it.qty||0)*Number(it.unitPrice||0))}</td></tr>`).join(""):'<tr><td colspan="4" class="muted">No line items.</td></tr>'}
+      </tbody></table>
+      <div class="itotals">
+        <div class="r"><span class="muted">Subtotal</span><span>${money(sub)}</span></div>
+        ${invDiscount(inv)?`<div class="r"><span class="muted">Discount${inv.discountType==="%"?" ("+esc(inv.discountValue)+"%)":""}</span><span>−${money(invDiscount(inv))}</span></div>`:""}
+        ${Number(inv.taxRate||0)?`<div class="r"><span class="muted">Tax (${esc(inv.taxRate)}%)</span><span>${money(tax)}</span></div>`:""}
+        <div class="r grand"><span>Project total</span><span>${money(tot)}</span></div>
+        ${paid?`<div class="r"><span class="muted">Already paid</span><span>−${money(paid)}</span></div>`:""}
+        <div class="r due"><span><b>Deposit due now (${pct}%)</b></span><span><b>${money(depositDue)}</b></span></div>
+        <div class="r"><span class="muted">Remaining balance (due on completion)</span><span>${money(remaining)}</span></div>
+      </div>
+      ${inv.notes?`<div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--line)"><div class="lbl" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-2);font-weight:700;margin-bottom:5px">Notes</div><div style="white-space:pre-line">${esc(inv.notes)}</div></div>`:""}
+    </div>`);
+}
+
+/* ---------- PDF export (self-contained, no libraries) ---------- */
+function toAscii(s){return String(s==null?"":s).replace(/[—–]/g,"-").replace(/·/g,"-").replace(/°/g," deg").replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/✓/g,"x").replace(/→/g,"->").replace(/[^\x20-\x7E]/g," ");}
+function pdfMoney(v){return "$"+Number(v||0).toLocaleString("en-US",{maximumFractionDigits:0});}
+function logoImage(dataUrl,maxW,maxH){return new Promise(res=>{if(!dataUrl)return res(null);const img=new Image();img.onload=()=>{try{let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)return res(null);const scale=Math.min(maxW/w,maxH/h,1);const dw=Math.max(1,Math.round(w*scale)),dh=Math.max(1,Math.round(h*scale));const c=document.createElement("canvas");c.width=Math.max(1,Math.min(w,dw*2));c.height=Math.max(1,Math.min(h,dh*2));const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);const b64=c.toDataURL("image/jpeg",0.9).split(",")[1];const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);res({bytes,w:c.width,h:c.height,dw,dh});}catch(_){res(null);}};img.onerror=()=>res(null);img.src=dataUrl;});}
+function Pdf(){
+  const W=612,H=792,M=54,RIGHT=W-M,BOTTOM=54;
+  const pages=[];let ops=[];let y=H-M;
+  const esc=s=>toAscii(s).replace(/([\\()])/g,"\\$1");
+  const wid=(s,sz,b)=>toAscii(s).length*sz*(b?0.55:0.5);
+  const emit=(s,x,sz,b,col)=>{ops.push((col?col+" rg ":"")+`BT /F${b?2:1} ${sz} Tf 1 0 0 1 ${(+x).toFixed(2)} ${y.toFixed(2)} Tm (${esc(s)}) Tj ET`+(col?" 0 0 0 rg":""));};
+  const need=h=>{if(y-h<BOTTOM){pages.push(ops.join("\n"));ops=[];y=H-M;}};
+  return {
+    W,H,M,RIGHT,get y(){return y;},
+    image(lg){if(!lg)return;need(lg.dh+6);const yb=y-lg.dh;ops.push(`q ${lg.dw} 0 0 ${lg.dh} ${M} ${yb.toFixed(2)} cm /Im0 Do Q`);y-=(lg.dh+26);},
+    text(s,o){o=o||{};const sz=o.size||10;need(sz+2);emit(s,o.x==null?M:o.x,sz,!!o.bold,o.color||null);y-=(o.gap==null?sz+5:o.gap);},
+    lr(l,r,o){o=o||{};const sz=o.size||10;need(sz+2);emit(l,M,sz,!!o.bold);emit(r,RIGHT-wid(r,sz,o.bold),sz,!!o.bold);y-=(sz+5);},
+    cols(cells){need(13);for(const c of cells){const sz=c.size||10;emit(c.t,c.right?(c.x-wid(c.t,sz,c.bold)):c.x,sz,!!c.bold);}y-=15;},
+    total(label,val,bold){need(14);const sz=bold?11:10;emit(label,470-wid(label,sz,bold),sz,!!bold);emit(val,RIGHT-wid(val,sz,bold),sz,!!bold);y-=(sz+5);},
+    gap(h){y-=(h==null?8:h);},
+    hr(){need(4);ops.push(`0.82 0.82 0.82 RG 0.7 w ${M} ${(y+7).toFixed(2)} m ${RIGHT} ${(y+7).toFixed(2)} l S 0 0 0 RG`);y-=8;},
+    build(lg){if(ops.length)pages.push(ops.join("\n"));return pdfAssemble(pages,W,H,lg);}
+  };
+}
+function pdfAssemble(streams,W,H,image){
+  if(!streams.length)streams=[""];
+  const enc=new TextEncoder();
+  const objs=[];
+  objs[1]="<</Type/Catalog/Pages 2 0 R>>";
+  objs[3]="<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>";
+  objs[4]="<</Type/Font/Subtype/Type1/BaseFont/Helvetica-Bold/Encoding/WinAnsiEncoding>>";
+  let n=5,imgN=0;
+  if(image){imgN=n++;}
+  const resX=image?`/XObject<</Im0 ${imgN} 0 R>>`:"";
+  const kids=[];
+  for(const s of streams){const pnum=n++,cnum=n++;kids.push(pnum);objs[pnum]=`<</Type/Page/Parent 2 0 R/MediaBox[0 0 ${W} ${H}]/Resources<</Font<</F1 3 0 R/F2 4 0 R>>${resX}>>/Contents ${cnum} 0 R>>`;objs[cnum]={stream:s};}
+  objs[2]=`<</Type/Pages/Kids[${kids.map(k=>k+" 0 R").join(" ")}]/Count ${kids.length}>>`;
+  if(image)objs[imgN]={image};
+  const parts=[];let pos=0;const off=[];
+  const add=x=>{const b=(typeof x==="string")?enc.encode(x):x;parts.push(b);pos+=b.length;};
+  add("%PDF-1.4\n");
+  for(let i=1;i<n;i++){off[i]=pos;add(`${i} 0 obj\n`);const o=objs[i];
+    if(typeof o==="string")add(o);
+    else if(o.stream!=null){const sb=enc.encode(o.stream);add(`<</Length ${sb.length}>>\nstream\n`);add(sb);add("\nendstream");}
+    else if(o.image){const im=o.image;add(`<</Type/XObject/Subtype/Image/Width ${im.w}/Height ${im.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${im.bytes.length}>>\nstream\n`);add(im.bytes);add("\nendstream");}
+    add("\nendobj\n");}
+  const xref=pos;add(`xref\n0 ${n}\n0000000000 65535 f \n`);
+  for(let i=1;i<n;i++)add(String(off[i]).padStart(10,"0")+" 00000 n \n");
+  add(`trailer\n<</Size ${n}/Root 1 0 R>>\nstartxref\n${xref}\n%%EOF`);
+  const total=new Uint8Array(pos);let p=0;for(const b of parts){total.set(b,p);p+=b.length;}
+  return new Blob([total],{type:"application/pdf"});
+}
+function savePdf(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name||"document.pdf";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);toast("PDF downloaded");}
+async function invoicePdf(inv,c,b,opts){
+  opts=opts||{};const p=Pdf();const items=inv.items||[];
+  const sub=invSubtotal(inv),tax=invTax(inv),tot=invTotal(inv),paid=invPaid(inv);
+  const logo=await logoImage(b.logo,180,64);if(logo)p.image(logo);
+  p.text(opts.deposit?"DEPOSIT INVOICE":"INVOICE",{size:22,bold:true,gap:26});
+  if(inv.number)p.text(inv.number,{size:11,color:"0.45 0.45 0.45",gap:24});
+  p.text(b.shopName||b.builderName||"Your shop",{size:13,bold:true});
+  if(b.shopName&&b.builderName)p.text(b.builderName,{size:10,color:"0.45 0.45 0.45"});
+  if(b.address)String(b.address).split(/\r?\n/).forEach(l=>l&&p.text(l,{size:10,color:"0.45 0.45 0.45"}));
+  [b.email,b.phone,b.website,b.taxId?("Tax ID: "+b.taxId):""].filter(Boolean).forEach(l=>p.text(l,{size:10,color:"0.45 0.45 0.45"}));
+  p.gap(6);p.hr();
+  p.text("BILL TO",{size:8,bold:true,color:"0.45 0.45 0.45",gap:12});
+  p.text((c&&c.name)||"-",{size:11,bold:true});
+  if(c&&c.address)String(c.address).split(/\r?\n/).forEach(l=>l&&p.text(l,{size:10,color:"0.45 0.45 0.45"}));
+  [c&&c.email,c&&c.phone].filter(Boolean).forEach(l=>p.text(l,{size:10,color:"0.45 0.45 0.45"}));
+  p.gap(2);p.text("Issued: "+fdate(inv.issueDate)+(inv.dueDate?"     Due: "+fdate(inv.dueDate):""),{size:10,color:"0.45 0.45 0.45"});
+  p.gap(6);p.hr();
+  p.cols([{t:"DESCRIPTION",x:p.M,bold:true,size:9},{t:"QTY",x:404,right:true,bold:true,size:9},{t:"UNIT",x:478,right:true,bold:true,size:9},{t:"AMOUNT",x:p.RIGHT,right:true,bold:true,size:9}]);
+  p.hr();
+  if(items.length)items.forEach(it=>{const amt=Number(it.qty||0)*Number(it.unitPrice||0);let d=toAscii(it.description||"");if(d.length>60)d=d.slice(0,58)+"..";p.cols([{t:d,x:p.M},{t:String(it.qty||1),x:404,right:true},{t:pdfMoney(it.unitPrice),x:478,right:true},{t:pdfMoney(amt),x:p.RIGHT,right:true}]);});
+  else p.text("No line items.",{size:10,color:"0.45 0.45 0.45"});
+  p.gap(4);p.hr();
+  p.total("Subtotal",pdfMoney(sub));
+  if(invDiscount(inv))p.total("Discount"+(inv.discountType==="%"?" ("+inv.discountValue+"%)":""),"-"+pdfMoney(invDiscount(inv)));
+  if(Number(inv.taxRate||0))p.total("Tax ("+inv.taxRate+"%)",pdfMoney(tax));
+  p.total("Total",pdfMoney(tot),true);
+  if(opts.deposit){const pct=opts.pct||0;const depAmt=Math.round(tot*pct/100);const depDue=Math.max(0,depAmt-paid);const rem=Math.max(0,tot-depAmt);if(paid)p.total("Already paid","-"+pdfMoney(paid));p.total("Deposit due now ("+pct+"%)",pdfMoney(depDue),true);p.total("Remaining balance",pdfMoney(rem));}
+  else{invPaymentList(inv).filter(x=>Number(x.amount||0)).forEach(x=>p.total((x.note||"Payment")+(x.date?" ("+fdate(x.date)+")":""),"-"+pdfMoney(x.amount)));p.total("Balance due",pdfMoney(Math.max(0,invBalance(inv))),true);}
+  if(inv.notes){p.gap(10);p.hr();p.text("NOTES",{size:8,bold:true,color:"0.45 0.45 0.45",gap:12});String(inv.notes).split(/\r?\n/).forEach(l=>p.text(l,{size:10}));}
+  return p.build(logo);
+}
+async function statusPdf(o,c,b){
+  const p=Pdf();const idx=Math.max(0,STAGES.indexOf(o.stage));
+  const logo=await logoImage(b.logo,180,64);if(logo)p.image(logo);
+  p.text(b.shopName||b.builderName||"Your shop",{size:14,bold:true,gap:17});
+  [b.email,b.phone,b.website].filter(Boolean).forEach(l=>p.text(l,{size:9,color:"0.45 0.45 0.45"}));
+  p.gap(8);p.text("BUILD STATUS",{size:20,bold:true,gap:24});
+  if(c&&c.name)p.text("Prepared for "+c.name,{size:10,color:"0.45 0.45 0.45",gap:14});
+  p.text(o.title||"Your custom build",{size:14,bold:true});
+  [["Material",o.frameMaterial],["Tubing",o.tubing],["Groupset",o.groupset],["Wheels",o.wheels],["Finish",o.finish]].filter(x=>x[1]).forEach(x=>p.text(x[0]+": "+x[1],{size:10,color:"0.45 0.45 0.45"}));
+  p.gap(6);p.hr();
+  p.text("Current stage: "+(o.stage||"-")+"   (step "+(idx+1)+" of "+STAGES.length+")",{size:12,bold:true});
+  if(STATUS_MSG[o.stage])p.text(STATUS_MSG[o.stage],{size:10});
+  if(o.promisedDate&&!DONE_STAGES.includes(o.stage))p.text("Estimated delivery: "+fdate(o.promisedDate),{size:10,color:"0.45 0.45 0.45"});
+  p.gap(6);p.hr();
+  p.text("PROGRESS",{size:8,bold:true,color:"0.45 0.45 0.45",gap:12});
+  STAGES.forEach((s,i)=>{const mark=i<idx?"[x]  ":(i===idx?">>  ":"[ ]  ");p.text(mark+s,{size:10,bold:i===idx,color:i<idx?"0.3 0.55 0.35":(i>idx?"0.6 0.6 0.6":null)});});
+  p.gap(10);p.hr();
+  const contact=[b.email,b.phone,b.website].filter(Boolean).join("    ");
+  p.text("Questions about your build? "+(contact||"Contact your builder."),{size:9,color:"0.45 0.45 0.45"});
+  return p.build(logo);
+}
+function fnameSafe(s){return (toAscii(s||"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"document");}
+async function dlInvoicePdf(id){const inv=await dbGet("invoices",id);if(!inv)return;const c=inv.customerId?await dbGet("customers",inv.customerId):null;const b=await getBuilder();savePdf(await invoicePdf(inv,c,b,{}),fnameSafe(inv.number||"invoice")+".pdf");}
+async function dlDepositPdf(id){const inv=await dbGet("invoices",id);if(!inv)return;const c=inv.customerId?await dbGet("customers",inv.customerId):null;const b=await getBuilder();const pct=Number(inv.depositPct!=null?inv.depositPct:(b.depositPct!=null?b.depositPct:50));savePdf(await invoicePdf(inv,c,b,{deposit:true,pct}),fnameSafe(inv.number||"invoice")+"-deposit.pdf");}
+async function dlStatusPdf(id){const o=await dbGet("orders",id);if(!o)return;const c=o.customerId?await dbGet("customers",o.customerId):null;const b=await getBuilder();savePdf(await statusPdf(o,c,b),fnameSafe(o.title||"build")+"-status.pdf");}
+async function buildSheetPdf(o,c,b){
+  const p=Pdf();const logo=await logoImage(b.logo,180,64);if(logo)p.image(logo);
+  p.text("BUILD SHEET",{size:22,bold:true,gap:28});
+  p.text(o.title||"Untitled build",{size:14,bold:true});
+  p.text([o.type,(c&&c.name)?("Customer: "+c.name):""].filter(Boolean).join("     "),{size:10,color:"0.45 0.45 0.45",gap:14});
+  p.hr();
+  p.text("Stage: "+(o.stage||"-")+(o.promisedDate?"      Promised: "+fdate(o.promisedDate):"")+(o.blocker?"      Blocked: "+o.blocker:""),{size:11,bold:true});
+  p.gap(6);p.hr();
+  p.text("SPEC",{size:8,bold:true,color:"0.45 0.45 0.45",gap:12});
+  const spec=[["Material",o.frameMaterial],["Tubing",o.tubing],["Groupset",o.groupset],["Wheels",o.wheels],["Cockpit",o.cockpit],["Saddle",o.saddle],["Tires",o.tires],["Finish",o.finish]].filter(x=>x[1]);
+  if(spec.length)spec.forEach(x=>p.text(x[0]+": "+x[1],{size:10}));else p.text("No spec entered.",{size:10,color:"0.45 0.45 0.45"});
+  if(o.specSummary)String(o.specSummary).split(/\r?\n/).forEach(l=>l&&p.text(l,{size:10,color:"0.45 0.45 0.45"}));
+  p.gap(6);p.hr();
+  p.text("BILL OF MATERIALS",{size:8,bold:true,color:"0.45 0.45 0.45",gap:12});
+  p.cols([{t:"CATEGORY",x:p.M,bold:true,size:9},{t:"ITEM",x:160,bold:true,size:9},{t:"STATUS",x:400,right:true,bold:true,size:9},{t:"PRICE",x:p.RIGHT,right:true,bold:true,size:9}]);
+  const bom=Array.isArray(o.bom)?o.bom:[];
+  if(bom.length)bom.forEach(bi=>p.cols([{t:toAscii(bi.category||""),x:p.M,size:9},{t:toAscii((bi.item||"")+(bi.brand?" ("+bi.brand+")":"")).slice(0,42),x:160,size:9},{t:toAscii(bi.status||""),x:400,right:true,size:9},{t:bi.price?pdfMoney(bi.price):"-",x:p.RIGHT,right:true,size:9}]));
+  else p.text("No components.",{size:10,color:"0.45 0.45 0.45"});
+  p.total("Total",pdfMoney(bomTotal(o)),true);
+  const geo=GEO_FIELDS.filter(f=>o.geometry&&o.geometry[f[0]]);
+  if(geo.length){p.gap(4);p.hr();p.text("GEOMETRY",{size:8,bold:true,color:"0.45 0.45 0.45",gap:12});for(let i=0;i<geo.length;i+=2){const a=geo[i],b2=geo[i+1];const cells=[{t:a[1]+": "+o.geometry[a[0]],x:p.M,size:10}];if(b2)cells.push({t:b2[1]+": "+o.geometry[b2[0]],x:310,size:10});p.cols(cells);}}
+  const fit=o.fitSnapshot?FIT_FIELDS.filter(f=>o.fitSnapshot[f[0]]):[];
+  if(fit.length){p.gap(4);p.hr();p.text("FIT SNAPSHOT",{size:8,bold:true,color:"0.45 0.45 0.45",gap:12});for(let j=0;j<fit.length;j+=2){const a=fit[j],b2=fit[j+1];const cells=[{t:a[1]+": "+o.fitSnapshot[a[0]],x:p.M,size:10}];if(b2)cells.push({t:b2[1]+": "+o.fitSnapshot[b2[0]],x:310,size:10});p.cols(cells);}}
+  const cl=Array.isArray(o.checklist)?o.checklist:[];
+  if(cl.length){p.gap(4);p.hr();p.text("CHECKLIST",{size:8,bold:true,color:"0.45 0.45 0.45",gap:12});cl.forEach(it=>p.text((it.done?"[x]  ":"[ ]  ")+toAscii(it.text||""),{size:10}));}
+  return p.build(logo);
+}
+async function dlBuildPdf(id){const o=await dbGet("orders",id);if(!o)return;const c=o.customerId?await dbGet("customers",o.customerId):null;const b=await getBuilder();savePdf(await buildSheetPdf(o,c,b),fnameSafe(o.title||"build")+"-sheet.pdf");}
+
+/* ---------- boot ---------- */
+window.addEventListener("hashchange",router);
+(async function(){
+  applyTheme();
+  const app=document.getElementById("app");
+  try{ await openDB(); }
+  catch(err){
+    if(app)app.innerHTML=`<div class="empty" style="padding:56px"><h2 style="margin:0 0 8px">Couldn't open your local data</h2><p>This app is probably open in another browser tab. Close the other tabs, then reload this page.</p><div class="actions" style="justify-content:center;margin-top:14px"><button class="btn pri" onclick="location.reload()">Reload</button></div><p class="muted" style="margin-top:14px;font-size:12px">${esc(err&&err.message||err)}</p></div>`;
+    return;
+  }
+  try{ await migrateStages(); }catch(_){}
+  try{ renderShopInfo(await getBuilder()); }catch(_){}
+  if(!location.hash)location.hash="#/";
+  router();
+})();
+</script>
